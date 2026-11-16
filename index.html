@@ -404,15 +404,15 @@
     <!-- ===================================================================
          SECTION 2B: PROJECT PLAYER & CUSTOM LINE RESYNC STUDIO
          =================================================================== -->
-    <section id="view-project-player" class="hidden space-y-5">
-      <div id="projectPlayerContainer" class="space-y-4 sm:space-y-5"></div>
+    <section id="view-project-player" class="hidden">
+      <div id="projectPlayerContainer" class="space-y-6 pb-40 sm:pb-32"></div>
     </section>
 
     <!-- ===================================================================
          SECTION 2C: SUGGESTION REVIEW STUDIO
          =================================================================== -->
     <section id="view-suggestion-review" class="hidden space-y-5">
-      <div id="suggestionReviewContainer" class="space-y-4 sm:space-y-5"></div>
+      <div id="suggestionReviewContainer" class="space-y-5"></div>
     </section>
 
     <!-- ===================================================================
@@ -463,7 +463,7 @@
   </main>
 
   <!-- Toast Notification Container -->
-  <div id="toastContainer" class="fixed bottom-4 right-4 left-4 sm:left-auto z-50 flex flex-col items-end gap-2 pointer-events-none"></div>
+  <div id="toastContainer" class="fixed bottom-28 sm:bottom-24 right-4 left-4 sm:left-auto z-50 flex flex-col items-end gap-2 pointer-events-none"></div>
 
   <!-- User Profile Modal -->
   <div
@@ -2130,71 +2130,25 @@
       const isSuggestingMode = Boolean(state.user && !canSave);
       const canEditDistribution = canSave || isSuggestingMode;
 
-      const playerSectionHtml = proj.youtube_video_id
+      const videoEmbedCardHtml = proj.youtube_video_id
         ? `
-          <div class="bg-surface border border-edge rounded-xl p-3.5 sm:p-5 space-y-4">
-            <div class="flex flex-col sm:flex-row gap-3.5 sm:gap-4 items-center">
-              <div class="w-full sm:w-56 aspect-video rounded-lg overflow-hidden bg-black border border-edge shrink-0">
-                <div id="ytProjectPlayerHost" class="w-full h-full"></div>
-              </div>
-
-              <div class="w-full flex-1 space-y-3">
-                <div class="grid grid-cols-3 sm:flex sm:flex-wrap items-center gap-2">
-                  <button
-                    type="button"
-                    id="playerPlayPauseBtn"
-                    onclick="toggleProjectPlayback()"
-                    class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs sm:text-sm font-semibold transition-colors min-h-[44px]"
-                  >
-                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
-                      <polygon points="5 3 19 12 5 21 5 3" />
-                    </svg>
-                    <span>Play</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onclick="seekRelative(-3)"
-                    class="px-3 py-2.5 rounded-lg bg-inset hover:bg-zinc-800 border border-edge text-xs sm:text-sm font-mono text-zinc-300 transition-colors min-h-[44px]"
-                  >
-                    -3s
-                  </button>
-
-                  <button
-                    type="button"
-                    id="playbackSpeedBtn"
-                    onclick="cyclePlaybackSpeed()"
-                    class="px-3 py-2.5 rounded-lg bg-inset hover:bg-zinc-800 border border-edge text-xs sm:text-sm font-mono text-zinc-300 transition-colors min-h-[44px]"
-                  >
-                    ${state.playbackRate}x
-                  </button>
-                </div>
-
-                <div class="space-y-1">
-                  <input
-                    type="range"
-                    id="playerSeekSlider"
-                    min="0"
-                    max="100"
-                    step="0.1"
-                    value="0"
-                    oninput="handleSeekSliderInput(this.value)"
-                    class="w-full studio-slider"
-                  />
-                  <div class="flex items-center justify-between text-xs font-mono text-zinc-400">
-                    <span id="playerCurrentTimeLabel">00:00.00</span>
-                    <span id="playerDurationLabel">00:00.00</span>
-                  </div>
-                </div>
-              </div>
+          <div class="bg-surface border border-edge rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row items-center gap-4">
+            <div class="w-full sm:w-52 aspect-video rounded-lg overflow-hidden bg-black border border-edge shrink-0">
+              <div id="ytProjectPlayerHost" class="w-full h-full"></div>
+            </div>
+            <div class="w-full flex-1 space-y-1.5 text-center sm:text-left">
+              <p class="text-sm font-medium text-zinc-100">YT Music Track Ready</p>
+              <p class="text-xs text-zinc-400 leading-relaxed">
+                Use the miniplayer bar at the bottom of your screen to play, pause, rewind, adjust speed, or scrub timestamps.
+              </p>
             </div>
           </div>
         `
         : canSave
         ? `
-          <div class="bg-surface border border-edge rounded-xl p-4 sm:p-5 space-y-3">
+          <div class="bg-surface border border-edge rounded-xl p-4 sm:p-6 space-y-3">
             <p class="text-xs text-zinc-300 leading-relaxed">No YT Music link was attached to this project yet. Paste one below to play and resync:</p>
-            <div class="flex flex-col sm:flex-row gap-2">
+            <div class="flex flex-col sm:flex-row gap-2.5">
               <input
                 type="text"
                 id="attachPlayerYtUrl"
@@ -2217,36 +2171,103 @@
           </div>
         `;
 
+      const bottomMiniplayerHtml = proj.youtube_video_id
+        ? `
+          <div
+            id="projectBottomMiniplayer"
+            class="fixed bottom-0 inset-x-0 z-40 bg-surface/95 backdrop-blur border-t border-edge shadow-2xl"
+          >
+            <div class="max-w-4xl mx-auto px-4 py-3 space-y-2.5">
+              <!-- Seek Slider & Time Readout -->
+              <div class="flex items-center gap-3">
+                <span id="playerCurrentTimeLabel" class="text-[11px] font-mono text-zinc-400 shrink-0 w-16">00:00.00</span>
+                <input
+                  type="range"
+                  id="playerSeekSlider"
+                  min="0"
+                  max="100"
+                  step="0.1"
+                  value="0"
+                  oninput="handleSeekSliderInput(this.value)"
+                  aria-label="Seek song position"
+                  class="w-full flex-1 studio-slider"
+                />
+                <span id="playerDurationLabel" class="text-[11px] font-mono text-zinc-400 shrink-0 w-16 text-right">00:00.00</span>
+              </div>
+
+              <!-- Transport Controls Row -->
+              <div class="flex items-center justify-between gap-2">
+                <div class="min-w-0 hidden sm:block">
+                  <p class="text-xs font-semibold text-zinc-100 truncate">${escapeHtml(proj.song_title)}</p>
+                  <p class="text-[11px] text-zinc-400 truncate">${escapeHtml(proj.artist_name)}</p>
+                </div>
+
+                <div class="grid grid-cols-3 sm:flex items-center gap-2 w-full sm:w-auto">
+                  <button
+                    type="button"
+                    onclick="seekRelative(-3)"
+                    class="px-3.5 py-2 rounded-lg bg-inset hover:bg-zinc-800 border border-edge text-xs font-mono text-zinc-300 transition-colors min-h-[40px]"
+                  >
+                    -3s
+                  </button>
+
+                  <button
+                    type="button"
+                    id="playerPlayPauseBtn"
+                    onclick="toggleProjectPlayback()"
+                    class="inline-flex items-center justify-center gap-2 px-5 py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs sm:text-sm font-semibold transition-colors min-h-[40px]"
+                  >
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                      <polygon points="5 3 19 12 5 21 5 3" />
+                    </svg>
+                    <span>Play</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    id="playbackSpeedBtn"
+                    onclick="cyclePlaybackSpeed()"
+                    class="px-3.5 py-2 rounded-lg bg-inset hover:bg-zinc-800 border border-edge text-xs font-mono text-zinc-300 transition-colors min-h-[40px]"
+                  >
+                    ${state.playbackRate}x
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        `
+        : '';
+
       const suggestModeBannerHtml = isSuggestingMode
         ? `
-          <div class="bg-surface border border-sky-500/35 rounded-xl p-3.5 sm:p-4 space-y-3">
-            <div class="space-y-0.5">
-              <div class="flex items-center gap-2">
+          <div class="bg-surface border border-sky-500/35 rounded-xl p-4 sm:p-5 space-y-3.5">
+            <div class="space-y-1">
+              <div class="flex flex-wrap items-center gap-2">
                 <span class="px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide rounded bg-sky-500/15 text-sky-300 border border-sky-500/30">
                   Suggest Edits Mode
                 </span>
                 <span class="text-xs font-medium text-zinc-200">Propose member assignments for ${escapeHtml(proj.created_by_name)}</span>
               </div>
-              <p class="text-xs text-zinc-400">
-                Turn on <strong>Multi-Select</strong> to tap multiple words or lyric lines at once, assign who sings them, and tap <strong>Submit Suggestion</strong>.
+              <p class="text-xs text-zinc-400 leading-relaxed">
+                Turn on <strong>Multi-Select Words</strong> to tap multiple words at once, assign who sings them, and tap <strong>Submit Suggestion</strong>.
               </p>
             </div>
 
-            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+            <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
               <input
                 type="text"
                 id="suggestionNoteField"
                 value="${escapeHtml(state.suggestionNoteInput)}"
                 oninput="state.suggestionNoteInput = this.value"
                 placeholder="Optional note for creator (e.g. Fixed chorus & bridge harmony)..."
-                class="w-full flex-1 bg-inset border border-edge rounded-lg px-3 py-2 text-base sm:text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 min-h-[40px]"
+                class="w-full flex-1 bg-inset border border-edge rounded-lg px-3.5 py-2.5 text-base sm:text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 min-h-[42px]"
               />
               <button
                 type="button"
                 id="submitProjectSuggestionBtn"
                 onclick="submitProjectSuggestion()"
                 ${state.isSubmittingSuggestion ? 'disabled' : ''}
-                class="w-full sm:w-auto px-4 py-2 rounded-lg bg-sky-400 hover:bg-sky-300 text-zinc-950 text-xs sm:text-sm font-semibold transition-colors min-h-[40px] shrink-0"
+                class="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-sky-400 hover:bg-sky-300 text-zinc-950 text-xs sm:text-sm font-semibold transition-colors min-h-[42px] shrink-0"
               >
                 ${state.isSubmittingSuggestion ? 'Submitting...' : 'Submit Suggestion'}
               </button>
@@ -2255,7 +2276,7 @@
         `
         : !state.user
         ? `
-          <div class="bg-surface border border-edge rounded-xl p-3.5 sm:p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <div class="bg-surface border border-edge rounded-xl p-4 sm:p-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <p class="text-xs text-zinc-400">Want to suggest which member sings each word or line? Sign in with Google to suggest changes.</p>
             <button
               type="button"
@@ -2271,7 +2292,7 @@
       const inProjectLrcImporterHtml =
         canSave && state.showProjectLrcImporter
           ? `
-            <div class="bg-surface border border-edgeHover rounded-xl p-4 space-y-3">
+            <div class="bg-surface border border-edgeHover rounded-xl p-4 sm:p-5 space-y-3.5">
               <div class="flex items-center justify-between">
                 <h3 class="text-sm font-semibold text-zinc-100">Import Synced Lyrics from LRClib</h3>
                 <button
@@ -2282,34 +2303,34 @@
                   Close
                 </button>
               </div>
-              <form onsubmit="event.preventDefault(); searchProjectLrclib();" class="flex flex-col sm:flex-row gap-2">
+              <form onsubmit="event.preventDefault(); searchProjectLrclib();" class="flex flex-col sm:flex-row gap-2.5">
                 <input
                   type="text"
                   id="inProjectLrcQueryInput"
                   value="${escapeAttr(`${proj.song_title} ${proj.artist_name}`)}"
                   placeholder="Song title and artist..."
-                  class="w-full flex-1 bg-inset border border-edge rounded-lg px-3 py-2 text-base sm:text-sm text-zinc-100 focus:outline-none focus:border-zinc-500 min-h-[40px]"
+                  class="w-full flex-1 bg-inset border border-edge rounded-lg px-3.5 py-2.5 text-base sm:text-sm text-zinc-100 focus:outline-none focus:border-zinc-500 min-h-[42px]"
                 />
                 <button
                   type="submit"
                   id="inProjectLrcSearchBtn"
-                  class="px-4 py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs sm:text-sm font-semibold min-h-[40px]"
+                  class="px-4 py-2.5 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs sm:text-sm font-semibold min-h-[42px]"
                 >
                   Search LRClib
                 </button>
               </form>
-              <div id="inProjectLrcResultsBox" class="space-y-1.5 max-h-52 overflow-y-auto"></div>
+              <div id="inProjectLrcResultsBox" class="space-y-2 max-h-52 overflow-y-auto"></div>
             </div>
           `
           : '';
 
       const topRightActionButtonsHtml = canSave
         ? `
-          <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+          <div class="flex flex-wrap items-center gap-2.5 w-full sm:w-auto">
             <button
               type="button"
               onclick="toggleProjectLrcImporter()"
-              class="flex-1 sm:flex-initial px-3.5 py-2.5 rounded-lg bg-surface hover:bg-zinc-800 border border-edge text-xs sm:text-sm font-medium text-zinc-200 transition-colors min-h-[42px]"
+              class="flex-1 sm:flex-initial px-4 py-2.5 rounded-lg bg-surface hover:bg-zinc-800 border border-edge text-xs sm:text-sm font-medium text-zinc-200 transition-colors min-h-[42px]"
             >
               Import LRClib
             </button>
@@ -2334,7 +2355,7 @@
 
       container.innerHTML = `
         <!-- Top Navigation & Save Bar -->
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <button
             type="button"
             onclick="switchTab('projects')"
@@ -2350,9 +2371,9 @@
         </div>
 
         <!-- Song Header -->
-        <div class="pt-0.5">
+        <div class="space-y-1">
           <h1 class="text-xl sm:text-2xl font-semibold text-zinc-100 leading-snug">${escapeHtml(proj.song_title)}</h1>
-          <p class="text-xs sm:text-sm text-zinc-400 mt-0.5">${escapeHtml(proj.artist_name)} &middot; Created by ${escapeHtml(proj.created_by_name)}</p>
+          <p class="text-xs sm:text-sm text-zinc-400">${escapeHtml(proj.artist_name)} &middot; Created by ${escapeHtml(proj.created_by_name)}</p>
         </div>
 
         <!-- Viewer Suggestion Mode Banner -->
@@ -2361,27 +2382,27 @@
         <!-- In-Project LRClib Importer Panel -->
         ${inProjectLrcImporterHtml}
 
-        <!-- Music Player Card -->
-        ${playerSectionHtml}
+        <!-- Video Preview Card -->
+        ${videoEmbedCardHtml}
 
         <!-- Members & Colors Panel -->
-        <div id="projectMembersPanel" class="bg-surface border border-edge rounded-xl p-3.5 sm:p-5 space-y-3.5"></div>
+        <div id="projectMembersPanel" class="bg-surface border border-edge rounded-xl p-4 sm:p-6 space-y-4"></div>
 
-        <!-- Multi-Select Floating / Sticky Batch Assignment Bar -->
-        <div id="multiSelectActionBar" class="hidden sticky bottom-3 z-30 bg-zinc-900/95 backdrop-blur border border-sky-400/50 rounded-xl p-3.5 shadow-xl space-y-2.5"></div>
+        <!-- Multi-Select Words Floating Bar (sits cleanly above bottom miniplayer) -->
+        <div id="multiSelectActionBar" class="hidden sticky bottom-28 sm:bottom-24 z-30 bg-zinc-900/95 backdrop-blur border border-sky-400/50 rounded-xl p-4 shadow-xl space-y-3"></div>
 
         <!-- Synced Lyrics, Line/Word Assignment & Custom Resync Panel -->
         <div class="bg-surface border border-edge rounded-xl overflow-hidden">
-          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-3.5 sm:px-4 py-3 border-b border-edge bg-inset/60">
-            <div class="space-y-0.5">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-4 sm:px-6 py-4 border-b border-edge bg-inset/60">
+            <div class="space-y-1">
               <div class="flex items-center gap-2">
-                <h2 class="text-sm font-semibold text-zinc-100">Synced Lyrics &amp; Distribution</h2>
+                <h2 class="text-sm sm:text-base font-semibold text-zinc-100">Synced Lyrics &amp; Distribution</h2>
                 <span class="text-xs font-mono text-zinc-500">(${state.activeProjectLines.length} lines)</span>
               </div>
-              <p class="text-[11px] text-zinc-400">
+              <p class="text-xs text-zinc-400">
                 ${
                   canEditDistribution
-                    ? 'Use Multi-Select to tap multiple words/lines easily, or tap individual words/lines to assign singers.'
+                    ? 'Use Multi-Select Words to tap multiple words at once, or tap individual words/lines to assign singers.'
                     : 'Tap any lyric line to jump playback to that timestamp.'
                 }
               </p>
@@ -2396,13 +2417,13 @@
                       id="multiSelectToggleBtn"
                       onclick="toggleMultiSelectMode()"
                       aria-pressed="${state.multiSelectMode ? 'true' : 'false'}"
-                      class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-semibold transition-colors min-h-[38px] ${
+                      class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg border text-xs font-semibold transition-colors min-h-[38px] ${
                         state.multiSelectMode
                           ? 'bg-sky-400 border-sky-400 text-zinc-950'
                           : 'bg-surface hover:bg-zinc-800 border-edge text-zinc-200'
                       }"
                     >
-                      <span>Multi-Select: ${state.multiSelectMode ? 'ON' : 'OFF'}</span>
+                      <span>Multi-Select Words: ${state.multiSelectMode ? 'ON' : 'OFF'}</span>
                     </button>
                   `
                   : ''
@@ -2413,7 +2434,7 @@
                     <button
                       type="button"
                       onclick="sortActiveLinesByTime()"
-                      class="flex-1 sm:flex-initial text-xs px-3 py-2 rounded-lg bg-surface hover:bg-zinc-800 border border-edge text-zinc-300 transition-colors min-h-[38px]"
+                      class="flex-1 sm:flex-initial text-xs px-3.5 py-2 rounded-lg bg-surface hover:bg-zinc-800 border border-edge text-zinc-300 transition-colors min-h-[38px]"
                     >
                       Sort by Time
                     </button>
@@ -2426,7 +2447,7 @@
                 id="autoLocateToggleBtn"
                 onclick="toggleAutoScrollLyrics()"
                 aria-pressed="${state.autoScrollLyrics ? 'true' : 'false'}"
-                class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-colors min-h-[38px] ${
+                class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg border text-xs font-medium transition-colors min-h-[38px] ${
                   state.autoScrollLyrics
                     ? 'bg-zinc-100 border-zinc-100 text-zinc-950'
                     : 'bg-surface hover:bg-zinc-800 border-edge text-zinc-400'
@@ -2438,8 +2459,11 @@
             </div>
           </div>
 
-          <div id="projectSyncLinesList" class="divide-y divide-edge/70 max-h-[68vh] overflow-y-auto"></div>
+          <div id="projectSyncLinesList" class="divide-y divide-edge/80"></div>
         </div>
+
+        <!-- Fixed Bottom Miniplayer -->
+        ${bottomMiniplayerHtml}
       `;
 
       renderProjectMembersPanel();
@@ -2555,17 +2579,17 @@
     }
 
     // ---------------------------------------------------------------------
-    // 8A. MULTI-SELECT MODE & SUGGESTION SUBMISSION
+    // 8A. MULTI-SELECT WORDS MODE & SUGGESTION SUBMISSION
     // ---------------------------------------------------------------------
     function toggleMultiSelectMode(forceState) {
       const next = typeof forceState === 'boolean' ? forceState : !state.multiSelectMode;
       state.multiSelectMode = next;
+      state.selectedLineIndices.clear();
       if (next) {
         state.activeAssignTarget = null;
         state.activeBrushMemberId = null;
       } else {
         state.selectedWordKeys.clear();
-        state.selectedLineIndices.clear();
       }
       renderProjectMembersPanel();
       renderMultiSelectActionBar();
@@ -2574,12 +2598,12 @@
       const btn = document.getElementById('multiSelectToggleBtn');
       if (btn) {
         btn.setAttribute('aria-pressed', state.multiSelectMode ? 'true' : 'false');
-        btn.className = `flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg border text-xs font-semibold transition-colors min-h-[38px] ${
+        btn.className = `flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg border text-xs font-semibold transition-colors min-h-[38px] ${
           state.multiSelectMode
             ? 'bg-sky-400 border-sky-400 text-zinc-950'
             : 'bg-surface hover:bg-zinc-800 border-edge text-zinc-200'
         }`;
-        btn.innerHTML = `<span>Multi-Select: ${state.multiSelectMode ? 'ON' : 'OFF'}</span>`;
+        btn.innerHTML = `<span>Multi-Select Words: ${state.multiSelectMode ? 'ON' : 'OFF'}</span>`;
       }
     }
 
@@ -2612,18 +2636,12 @@
     }
 
     function applyMemberToMultiSelection(memberId) {
-      if (state.selectedWordKeys.size === 0 && state.selectedLineIndices.size === 0) {
-        showToast('Tap at least one word or lyric line first.', 'info');
+      if (state.selectedWordKeys.size === 0) {
+        showToast('Tap at least one word first.', 'info');
         return;
       }
 
       let allHaveMember = true;
-      state.selectedLineIndices.forEach((lIdx) => {
-        const line = state.activeProjectLines[lIdx];
-        if (line && !(line.lineMembers || []).includes(memberId)) {
-          allHaveMember = false;
-        }
-      });
       state.selectedWordKeys.forEach((key) => {
         const [lStr, wStr] = key.split(':');
         const line = state.activeProjectLines[Number(lStr)];
@@ -2633,18 +2651,6 @@
           if (!wm.includes(memberId)) {
             allHaveMember = false;
           }
-        }
-      });
-
-      state.selectedLineIndices.forEach((lIdx) => {
-        const line = state.activeProjectLines[lIdx];
-        if (!line) return;
-        if (!Array.isArray(line.lineMembers)) line.lineMembers = [];
-        const pos = line.lineMembers.indexOf(memberId);
-        if (allHaveMember) {
-          if (pos >= 0) line.lineMembers.splice(pos, 1);
-        } else if (pos < 0) {
-          line.lineMembers.push(memberId);
         }
       });
 
@@ -2673,10 +2679,6 @@
     }
 
     function clearMembersFromMultiSelection() {
-      state.selectedLineIndices.forEach((lIdx) => {
-        const line = state.activeProjectLines[lIdx];
-        if (line) line.lineMembers = [];
-      });
       state.selectedWordKeys.forEach((key) => {
         const [lStr, wStr] = key.split(':');
         const line = state.activeProjectLines[Number(lStr)];
@@ -2695,17 +2697,13 @@
       if (!barEl) return;
 
       const wordCount = state.selectedWordKeys.size;
-      const lineCount = state.selectedLineIndices.size;
 
-      if (!state.multiSelectMode || (wordCount === 0 && lineCount === 0)) {
+      if (!state.multiSelectMode || wordCount === 0) {
         barEl.classList.add('hidden');
         return;
       }
 
       barEl.classList.remove('hidden');
-      const summaryParts = [];
-      if (wordCount > 0) summaryParts.push(`${wordCount} word${wordCount === 1 ? '' : 's'}`);
-      if (lineCount > 0) summaryParts.push(`${lineCount} line${lineCount === 1 ? '' : 's'}`);
 
       const memberButtonsHtml =
         state.activeProjectMembers.length > 0
@@ -2728,8 +2726,8 @@
 
       barEl.innerHTML = `
         <div class="flex items-center justify-between gap-2 text-xs">
-          <span class="font-semibold text-sky-300">Selected: ${summaryParts.join(' & ')} — tap member(s) to assign</span>
-          <div class="flex items-center gap-2 shrink-0">
+          <span class="font-semibold text-sky-300">Selected: ${wordCount} word${wordCount === 1 ? '' : 's'} — tap member(s) to assign</span>
+          <div class="flex items-center gap-2.5 shrink-0">
             <button type="button" onclick="clearMembersFromMultiSelection()" class="text-zinc-400 hover:text-rose-400">Clear Singers</button>
             <button type="button" onclick="clearMultiSelection()" class="text-zinc-300 hover:text-white font-medium">Deselect</button>
           </div>
@@ -2850,13 +2848,13 @@
 
       const addFormHtml = canEdit
         ? `
-          <form onsubmit="event.preventDefault(); addProjectMember();" class="flex flex-col sm:flex-row sm:items-center gap-2">
+          <form onsubmit="event.preventDefault(); addProjectMember();" class="flex flex-col sm:flex-row sm:items-center gap-2.5">
             <input
               type="text"
               id="newMemberNameInput"
               maxlength="30"
               placeholder="Member name (e.g. Wonhee)"
-              class="w-full sm:flex-1 bg-inset border border-edge rounded-lg px-3 py-2 text-base sm:text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 min-h-[38px]"
+              class="w-full sm:flex-1 bg-inset border border-edge rounded-lg px-3.5 py-2 text-base sm:text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 min-h-[40px]"
             />
             <div class="flex items-center gap-2">
               <input
@@ -2866,7 +2864,7 @@
                 class="w-9 h-9 rounded-lg bg-inset border border-edge cursor-pointer p-0.5 shrink-0"
                 title="Member color"
               />
-              <div class="flex flex-wrap items-center gap-1">${swatchesHtml}</div>
+              <div class="flex flex-wrap items-center gap-1.5">${swatchesHtml}</div>
               <button
                 type="submit"
                 class="px-3.5 py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-semibold transition-colors min-h-[38px] shrink-0"
@@ -2909,9 +2907,9 @@
 
       panelEl.innerHTML = `
         <div class="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h2 class="text-sm font-semibold text-zinc-100">Members &amp; Colors</h2>
-            <p class="text-[11px] text-zinc-400">Assign 2 or more members to a line or word to automatically create a gradient.</p>
+          <div class="space-y-0.5">
+            <h2 class="text-sm sm:text-base font-semibold text-zinc-100">Members &amp; Colors</h2>
+            <p class="text-xs text-zinc-400">Assign 2 or more members to a line or word to automatically create a gradient.</p>
           </div>
           ${
             state.activeBrushMemberId && !state.multiSelectMode
@@ -2990,11 +2988,6 @@
       const proj = state.projects.find((p) => p.id === state.activeProjectId);
       if (!state.user || !proj) return;
 
-      if (state.multiSelectMode) {
-        toggleLineSelection(lineIndex);
-        return;
-      }
-
       if (state.activeProjectMembers.length === 0) {
         showToast('Add at least one member in "Members & Colors" above first.', 'info');
         const inp = document.getElementById('newMemberNameInput');
@@ -3002,7 +2995,7 @@
         return;
       }
 
-      if (state.activeBrushMemberId) {
+      if (state.activeBrushMemberId && !state.multiSelectMode) {
         toggleLineMember(lineIndex, state.activeBrushMemberId);
         return;
       }
@@ -3356,7 +3349,7 @@
     }
 
     // ---------------------------------------------------------------------
-    // 8D. RENDER SYNCED LYRICS LIST (WITH PER-LINE SUGGESTIONS BUTTON)
+    // 8D. RENDER SYNCED LYRICS LIST (SPACIOUS LAYOUT + WORD MULTI-SELECT)
     // ---------------------------------------------------------------------
     function renderProjectSyncLinesList() {
       const listEl = document.getElementById('projectSyncLinesList');
@@ -3368,7 +3361,7 @@
 
       if (state.activeProjectLines.length === 0) {
         listEl.innerHTML = `
-          <div class="p-8 text-center space-y-2">
+          <div class="p-10 text-center space-y-2">
             <p class="text-sm text-zinc-300">No synced lyric lines yet.</p>
             ${
               canResync
@@ -3403,7 +3396,7 @@
                   type="button"
                   onclick="event.stopPropagation(); handleLineSingerClick(${index});"
                   title="Assign who sings this entire line"
-                  class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-[11px] font-semibold transition-colors min-h-[28px] ${
+                  class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-semibold transition-colors min-h-[30px] ${
                     isLineTarget ? 'bg-zinc-800 border-zinc-200' : 'bg-inset hover:bg-zinc-800 border-edge'
                   }"
                 >
@@ -3421,7 +3414,7 @@
                   type="button"
                   onclick="event.stopPropagation(); handleLineSingerClick(${index});"
                   title="Assign who sings this entire line"
-                  class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border text-[11px] transition-colors min-h-[28px] ${
+                  class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border text-xs transition-colors min-h-[30px] ${
                     isLineTarget
                       ? 'bg-zinc-800 border-zinc-200 text-zinc-100'
                       : 'bg-inset hover:bg-zinc-800 border-edge text-zinc-400 hover:text-zinc-200'
@@ -3434,7 +3427,7 @@
 
           const resyncControlsHtml = canResync
             ? `
-              <div onclick="event.stopPropagation()" class="grid grid-cols-3 sm:flex items-center gap-1.5 w-full sm:w-auto">
+              <div onclick="event.stopPropagation()" class="grid grid-cols-3 sm:flex items-center gap-1.5 w-full sm:w-auto pt-1 sm:pt-0">
                 <button
                   type="button"
                   onclick="stampLineToCurrentTime(${index})"
@@ -3459,24 +3452,6 @@
               </div>
             `
             : '';
-
-          const isLineMultiSelected = state.multiSelectMode && state.selectedLineIndices.has(index);
-          const lineSelectBtnHtml =
-            canAssignMembers && state.multiSelectMode
-              ? `
-                <button
-                  type="button"
-                  onclick="event.stopPropagation(); toggleLineSelection(${index});"
-                  class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border text-[11px] font-semibold transition-colors min-h-[28px] ${
-                    isLineMultiSelected
-                      ? 'bg-sky-400 border-sky-400 text-zinc-950'
-                      : 'bg-inset hover:bg-zinc-800 border-edge text-zinc-300'
-                  }"
-                >
-                  <span>${isLineMultiSelected ? 'Line Selected' : 'Select Line'}</span>
-                </button>
-              `
-              : '';
 
           const wordsHtml = words
             .map((word, wIdx) => {
@@ -3508,13 +3483,13 @@
                 wordTextStyle = `color: ${effectiveColors[0]}; font-weight: 600;`;
                 if (isWordExplicit) {
                   pillStyle = `background-color: ${effectiveColors[0]}1f;`;
-                  underlineHtml = `<span class="block h-[2px] w-full rounded-full mt-0.5" style="background-color: ${effectiveColors[0]};"></span>`;
+                  underlineHtml = `<span class="block h-[2px] w-full rounded-full mt-1" style="background-color: ${effectiveColors[0]};"></span>`;
                 }
               } else if (hasGradient) {
                 wordTextStyle = `background-image: ${gradCss}; -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 700;`;
                 if (isWordExplicit) {
                   pillStyle = `background-color: rgba(255, 255, 255, 0.06);`;
-                  underlineHtml = `<span class="block h-[2.5px] w-full rounded-full mt-0.5" style="background: ${gradCss};"></span>`;
+                  underlineHtml = `<span class="block h-[2.5px] w-full rounded-full mt-1" style="background: ${gradCss};"></span>`;
                 }
               }
 
@@ -3533,7 +3508,7 @@
                   onclick="event.stopPropagation(); handleWordTap(${index}, ${wIdx});"
                   title="${escapeAttr(memberTooltip)}"
                   style="${pillStyle}"
-                  class="inline-flex flex-col items-start px-1.5 py-0.5 rounded-md text-base sm:text-sm leading-snug transition-all hover:bg-zinc-800/90 cursor-pointer ${
+                  class="inline-flex flex-col items-start px-2 py-1 rounded-lg text-base sm:text-lg leading-relaxed transition-all hover:bg-zinc-800/90 cursor-pointer ${
                     isWordMultiSelected
                       ? 'ring-2 ring-sky-400 bg-sky-500/20'
                       : isTargetWord
@@ -3581,7 +3556,7 @@
                   <button
                     type="button"
                     onclick="${toggleAction}"
-                    class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors min-h-[34px] ${
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors min-h-[36px] ${
                       isSelected
                         ? 'bg-zinc-800 border-zinc-200 text-white'
                         : 'bg-surface hover:bg-zinc-800 border-edge text-zinc-400'
@@ -3602,16 +3577,16 @@
             inlineAssignDrawerHtml = `
               <div
                 onclick="event.stopPropagation()"
-                class="bg-inset border border-edgeHover rounded-lg p-3 space-y-2.5"
+                class="bg-inset border border-edgeHover rounded-xl p-3.5 space-y-3"
               >
                 <div class="flex items-center justify-between gap-2">
                   <span class="text-xs font-semibold text-zinc-200">Assign ${targetLabel} <span class="font-normal text-zinc-500">(select 2+ for gradient)</span></span>
-                  <div class="flex items-center gap-2">
+                  <div class="flex items-center gap-2.5">
                     <button type="button" onclick="${clearAction}" class="text-xs text-zinc-400 hover:text-rose-400">Clear</button>
-                    <button type="button" onclick="closeAssignDrawer()" class="text-xs text-zinc-200 font-medium px-2 py-0.5 rounded bg-surface border border-edge">Done</button>
+                    <button type="button" onclick="closeAssignDrawer()" class="text-xs text-zinc-200 font-medium px-2.5 py-1 rounded bg-surface border border-edge">Done</button>
                   </div>
                 </div>
-                <div class="flex flex-wrap items-center gap-1.5">
+                <div class="flex flex-wrap items-center gap-2">
                   ${memberTogglesHtml}
                 </div>
               </div>
@@ -3620,7 +3595,7 @@
 
           const leftAccentBarHtml =
             lineColors.length > 0
-              ? `<span class="w-1 self-stretch rounded-full shrink-0" style="background: ${lineBgGradient};"></span>`
+              ? `<span class="w-1.5 self-stretch rounded-full shrink-0" style="background: ${lineBgGradient};"></span>`
               : '';
 
           const lineSuggestions = proj ? getPendingSuggestionsForProjectLine(proj, index) : [];
@@ -3632,7 +3607,7 @@
               type="button"
               onclick="event.stopPropagation(); toggleLineSuggestionsDrawer(${index});"
               title="See proposed changes for this lyric line"
-              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-[11px] font-medium transition-colors min-h-[28px] ${
+              class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md border text-xs font-medium transition-colors min-h-[30px] ${
                 hasLineSuggestions
                   ? isSuggestionsDrawerOpen
                     ? 'bg-amber-400 border-amber-400 text-zinc-950 font-semibold'
@@ -3657,7 +3632,7 @@
               lineSuggestionsDrawerHtml = `
                 <div
                   onclick="event.stopPropagation()"
-                  class="bg-inset border border-edge rounded-lg p-3 flex items-center justify-between gap-2"
+                  class="bg-inset border border-edge rounded-xl p-3.5 flex items-center justify-between gap-2"
                 >
                   <p class="text-xs text-zinc-400">No pending suggestions on this lyric line.</p>
                   <button
@@ -3679,8 +3654,8 @@
 
                   const propLineBadge =
                     propLineMems.length > 0
-                      ? `<span class="text-[11px] font-medium text-zinc-300">Line singer: <strong style="color: ${propLineColors[0]};">${propLineMems.map((m) => escapeHtml(m.name)).join(' + ')}</strong></span>`
-                      : `<span class="text-[11px] text-zinc-500">Line singer: None</span>`;
+                      ? `<span class="text-xs font-medium text-zinc-300">Line singer: <strong style="color: ${propLineColors[0]};">${propLineMems.map((m) => escapeHtml(m.name)).join(' + ')}</strong></span>`
+                      : `<span class="text-xs text-zinc-500">Line singer: None</span>`;
 
                   const propWordsPreviewHtml = words
                     .map((w, wIdx) => {
@@ -3704,31 +3679,31 @@
                       }
                       const whoTitle =
                         wMems.length > 0 ? wMems.map((m) => m.name).join(' + ') : 'Default';
-                      return `<span title="${escapeAttr(whoTitle)}" style="${styleAttr}" class="text-xs px-1 py-0.5 rounded bg-surface/80">${escapeHtml(w)}</span>`;
+                      return `<span title="${escapeAttr(whoTitle)}" style="${styleAttr}" class="text-xs sm:text-sm px-1.5 py-0.5 rounded bg-surface/80">${escapeHtml(w)}</span>`;
                     })
                     .join('');
 
                   const actionButtonsHtml = canResync
                     ? `
-                      <div class="flex flex-wrap items-center gap-2 pt-1">
+                      <div class="flex flex-wrap items-center gap-2 pt-1.5">
                         <button
                           type="button"
                           onclick="acceptLineSuggestion('${sug.id}', ${index})"
-                          class="px-3 py-1.5 rounded-lg bg-emerald-400 hover:bg-emerald-300 text-zinc-950 text-xs font-semibold transition-colors min-h-[34px]"
+                          class="px-3.5 py-1.5 rounded-lg bg-emerald-400 hover:bg-emerald-300 text-zinc-950 text-xs font-semibold transition-colors min-h-[36px]"
                         >
                           Accept Change
                         </button>
                         <button
                           type="button"
                           onclick="rejectLineSuggestion('${sug.id}', ${index})"
-                          class="px-3 py-1.5 rounded-lg bg-surface hover:bg-rose-950/60 border border-rose-500/40 text-xs font-semibold text-rose-300 transition-colors min-h-[34px]"
+                          class="px-3.5 py-1.5 rounded-lg bg-surface hover:bg-rose-950/60 border border-rose-500/40 text-xs font-semibold text-rose-300 transition-colors min-h-[36px]"
                         >
                           Reject
                         </button>
                         <button
                           type="button"
                           onclick="openSuggestionReviewFromNotification('${sug.id}')"
-                          class="px-2.5 py-1.5 rounded-lg bg-surface hover:bg-zinc-800 border border-edge text-xs text-zinc-300 transition-colors min-h-[34px]"
+                          class="px-3 py-1.5 rounded-lg bg-surface hover:bg-zinc-800 border border-edge text-xs text-zinc-300 transition-colors min-h-[36px]"
                         >
                           View All Lines
                         </button>
@@ -3739,7 +3714,7 @@
                         <button
                           type="button"
                           onclick="openSuggestionReviewFromNotification('${sug.id}')"
-                          class="px-2.5 py-1.5 rounded-lg bg-surface hover:bg-zinc-800 border border-edge text-xs text-sky-300 transition-colors min-h-[34px]"
+                          class="px-3 py-1.5 rounded-lg bg-surface hover:bg-zinc-800 border border-edge text-xs text-sky-300 transition-colors min-h-[36px]"
                         >
                           Inspect Full Suggestion
                         </button>
@@ -3747,14 +3722,14 @@
                     `;
 
                   return `
-                    <div class="bg-surface border border-amber-500/30 rounded-lg p-3 space-y-2">
+                    <div class="bg-surface border border-amber-500/30 rounded-xl p-3.5 space-y-2.5">
                       <div class="flex items-center justify-between gap-2">
                         <span class="text-xs font-semibold text-zinc-100">${escapeHtml(sug.suggester_name)}</span>
                         <span class="text-[11px] text-zinc-500">${formatRelativeTime(sug.created_at)}</span>
                       </div>
                       ${sug.note ? `<p class="text-xs text-zinc-400 italic">"${escapeHtml(sug.note)}"</p>` : ''}
                       <div>${propLineBadge}</div>
-                      <div class="flex flex-wrap items-center gap-1 p-2 rounded bg-inset border border-edge/80">
+                      <div class="flex flex-wrap items-center gap-1.5 p-2.5 rounded-lg bg-inset border border-edge/80">
                         ${propWordsPreviewHtml}
                       </div>
                       ${actionButtonsHtml}
@@ -3766,7 +3741,7 @@
               lineSuggestionsDrawerHtml = `
                 <div
                   onclick="event.stopPropagation()"
-                  class="bg-inset border border-amber-500/35 rounded-lg p-3 space-y-2.5"
+                  class="bg-inset border border-amber-500/35 rounded-xl p-3.5 space-y-3"
                 >
                   <div class="flex items-center justify-between gap-2">
                     <span class="text-xs font-semibold text-amber-300">Proposed Changes for Line #${index + 1}</span>
@@ -3778,7 +3753,7 @@
                       Close
                     </button>
                   </div>
-                  <div class="space-y-2">
+                  <div class="space-y-2.5">
                     ${cardsHtml}
                   </div>
                 </div>
@@ -3789,25 +3764,21 @@
           return `
             <div
               id="sync-line-row-${index}"
-              onclick="${state.multiSelectMode ? `toggleLineSelection(${index})` : `seekToLine(${index})`}"
-              class="px-3.5 sm:px-4 py-3.5 flex gap-2.5 transition-colors cursor-pointer ${
-                isLineMultiSelected
-                  ? 'bg-sky-500/15'
-                  : isActive
-                  ? 'bg-zinc-800/80'
-                  : 'hover:bg-inset/40'
+              onclick="seekToLine(${index})"
+              class="px-4 sm:px-6 py-4 sm:py-5 flex gap-3.5 transition-colors cursor-pointer ${
+                isActive ? 'bg-zinc-800/80' : 'hover:bg-inset/40'
               }"
             >
               ${leftAccentBarHtml}
-              <div class="flex-1 min-w-0 space-y-2.5">
+              <div class="flex-1 min-w-0 space-y-3.5">
                 <!-- Top Metadata & Resync Row -->
-                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                   <div class="flex flex-wrap items-center gap-2">
                     <button
                       type="button"
                       onclick="event.stopPropagation(); seekToLine(${index});"
                       title="Jump playback to this line"
-                      class="font-mono text-xs shrink-0 px-2 py-1 rounded transition-colors ${
+                      class="font-mono text-xs shrink-0 px-2.5 py-1 rounded-md transition-colors min-h-[30px] ${
                         isActive
                           ? 'bg-zinc-100 text-zinc-950 font-semibold'
                           : 'bg-inset text-zinc-400 hover:text-zinc-100'
@@ -3815,7 +3786,6 @@
                     >
                       ${formatSecondsToLrc(line.time)}
                     </button>
-                    ${lineSelectBtnHtml}
                     ${lineSingerBadgeHtml}
                     ${lineSuggestionBtnHtml}
                   </div>
@@ -3823,7 +3793,7 @@
                 </div>
 
                 <!-- Tappable Words Row -->
-                <div class="flex flex-wrap items-center gap-x-0.5 gap-y-1">
+                <div class="flex flex-wrap items-center gap-x-1.5 gap-y-2 pt-0.5">
                   ${wordsHtml}
                 </div>
 
@@ -3973,7 +3943,7 @@
           const lineSingerBadgeHtml =
             lineAssignedMembers.length > 0
               ? `
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-inset border border-edge text-[11px] font-semibold">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-inset border border-edge text-xs font-semibold">
                   <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background: ${lineHorizGradient};"></span>
                   <span style="${
                     hasLineGradient
@@ -4008,7 +3978,7 @@
 
               return `
                 <span
-                  class="inline-flex flex-col items-start px-1.5 py-0.5 rounded-md text-base sm:text-sm leading-snug ${
+                  class="inline-flex flex-col items-start px-2 py-1 rounded-lg text-base sm:text-lg leading-relaxed ${
                     effectiveColors.length === 0 ? 'text-zinc-200' : ''
                   }"
                 >
@@ -4020,20 +3990,20 @@
 
           const leftAccentBarHtml =
             lineColors.length > 0
-              ? `<span class="w-1 self-stretch rounded-full shrink-0" style="background: ${lineBgGradient};"></span>`
+              ? `<span class="w-1.5 self-stretch rounded-full shrink-0" style="background: ${lineBgGradient};"></span>`
               : '';
 
           return `
             <div
-              class="px-3.5 sm:px-4 py-3.5 flex gap-2.5 transition-colors ${
+              class="px-4 sm:px-6 py-4 sm:py-5 flex gap-3.5 transition-colors ${
                 isLineChanged ? 'bg-sky-500/[0.06]' : ''
               }"
             >
               ${leftAccentBarHtml}
-              <div class="flex-1 min-w-0 space-y-2">
+              <div class="flex-1 min-w-0 space-y-3">
                 <div class="flex flex-wrap items-center justify-between gap-2">
                   <div class="flex flex-wrap items-center gap-2">
-                    <span class="font-mono text-xs px-2 py-1 rounded bg-inset text-zinc-400">
+                    <span class="font-mono text-xs px-2.5 py-1 rounded-md bg-inset text-zinc-400">
                       ${formatSecondsToLrc(line.time)}
                     </span>
                     ${lineSingerBadgeHtml}
@@ -4044,7 +4014,7 @@
                       : ''
                   }
                 </div>
-                <div class="flex flex-wrap items-center gap-x-0.5 gap-y-1">
+                <div class="flex flex-wrap items-center gap-x-1.5 gap-y-2">
                   ${wordsHtml}
                 </div>
               </div>
@@ -4069,7 +4039,7 @@
           ${decisionButtonsHtml}
         </div>
 
-        <div class="bg-surface border border-sky-500/30 rounded-xl p-4 space-y-1.5">
+        <div class="bg-surface border border-sky-500/30 rounded-xl p-4 sm:p-5 space-y-1.5">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <h1 class="text-lg sm:text-xl font-semibold text-zinc-100">${escapeHtml(sug.project_title)}</h1>
             <span class="text-xs font-mono text-sky-300">${changedLinesCount} line${changedLinesCount === 1 ? '' : 's'} modified</span>
@@ -4080,7 +4050,7 @@
           ${sug.note ? `<p class="text-xs text-zinc-300 bg-inset border border-edge rounded-lg p-2.5 mt-1">"${escapeHtml(sug.note)}"</p>` : ''}
         </div>
 
-        <div class="bg-surface border border-edge rounded-xl p-3.5 sm:p-5 space-y-3">
+        <div class="bg-surface border border-edge rounded-xl p-4 sm:p-5 space-y-3">
           <div class="flex items-center justify-between">
             <h2 class="text-sm font-semibold text-zinc-100">Members &amp; Colors</h2>
             <span class="text-xs font-mono text-zinc-500">${state.reviewProjectMembers.length} members</span>
@@ -4091,11 +4061,11 @@
         </div>
 
         <div class="bg-surface border border-edge rounded-xl overflow-hidden">
-          <div class="px-3.5 sm:px-4 py-3 border-b border-edge bg-inset/60">
+          <div class="px-4 sm:px-6 py-4 border-b border-edge bg-inset/60">
             <h2 class="text-sm font-semibold text-zinc-100">Proposed Synced Lyrics &amp; Distribution</h2>
-            <p class="text-[11px] text-zinc-400">Highlighted rows show the lines where ${escapeHtml(sug.suggester_name)} changed member assignments.</p>
+            <p class="text-xs text-zinc-400">Highlighted rows show the lines where ${escapeHtml(sug.suggester_name)} changed member assignments.</p>
           </div>
-          <div class="divide-y divide-edge/70 max-h-[68vh] overflow-y-auto">
+          <div class="divide-y divide-edge/80">
             ${linesHtml}
           </div>
         </div>
@@ -4209,7 +4179,7 @@
       const btn = document.getElementById('autoLocateToggleBtn');
       if (btn) {
         btn.setAttribute('aria-pressed', state.autoScrollLyrics ? 'true' : 'false');
-        btn.className = `flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-colors min-h-[38px] ${
+        btn.className = `flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-3.5 py-2 rounded-lg border text-xs font-medium transition-colors min-h-[38px] ${
           state.autoScrollLyrics
             ? 'bg-zinc-100 border-zinc-100 text-zinc-950'
             : 'bg-surface hover:bg-zinc-800 border-edge text-zinc-400'
@@ -4450,16 +4420,14 @@
       if (foundIdx === state.activeLineIndex) return;
 
       const prevRow = document.getElementById(`sync-line-row-${state.activeLineIndex}`);
-      if (prevRow && !state.selectedLineIndices.has(state.activeLineIndex)) {
+      if (prevRow) {
         prevRow.classList.remove('bg-zinc-800/80');
       }
 
       state.activeLineIndex = foundIdx;
       const nextRow = document.getElementById(`sync-line-row-${foundIdx}`);
       if (nextRow) {
-        if (!state.selectedLineIndices.has(foundIdx)) {
-          nextRow.classList.add('bg-zinc-800/80');
-        }
+        nextRow.classList.add('bg-zinc-800/80');
         if (state.autoScrollLyrics) {
           nextRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }
