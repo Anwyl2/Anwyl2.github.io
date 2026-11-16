@@ -213,7 +213,7 @@
       </div>
 
       <!-- Main Section Tabs -->
-      <nav class="grid grid-cols-4 sm:flex items-center gap-1 bg-surface border border-edge rounded-xl p-1 w-full sm:w-auto" aria-label="Main navigation">
+      <nav class="grid grid-cols-3 sm:flex items-center gap-1 bg-surface border border-edge rounded-xl p-1 w-full sm:w-auto" aria-label="Main navigation">
         <button
           type="button"
           id="nav-home"
@@ -237,14 +237,6 @@
           class="px-2.5 sm:px-3.5 py-2 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors text-zinc-400 hover:text-zinc-200 text-center truncate"
         >
           Projects <span id="badge-projects" class="ml-0.5 text-[11px] text-zinc-500">0</span>
-        </button>
-        <button
-          type="button"
-          id="nav-about"
-          onclick="switchTab('about')"
-          class="px-2.5 sm:px-3.5 py-2 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors text-zinc-400 hover:text-zinc-200 text-center truncate"
-        >
-          About
         </button>
       </nav>
 
@@ -351,7 +343,7 @@
               type="text"
               id="ytSearchInput"
               autocomplete="off"
-              placeholder="e.g. ILLIT Magnetic Official MV"
+              placeholder="e.g. Backstreet Boys I Want It That Way"
               class="w-full flex-1 bg-inset border border-edge rounded-lg px-3.5 py-2.5 text-base sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 min-h-[44px]"
             />
             <button
@@ -468,7 +460,7 @@
               autocorrect="off"
               spellcheck="false"
               oninput="handleProjectTitleAutoSearch()"
-              placeholder="e.g. Supernova"
+              placeholder="e.g. I Want It That Way"
               class="w-full bg-inset border border-edge rounded-lg px-3.5 py-2.5 text-base sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 min-h-[44px]"
             />
           </div>
@@ -482,7 +474,7 @@
               autocorrect="off"
               autocapitalize="off"
               spellcheck="false"
-              placeholder="e.g. aespa"
+              placeholder="e.g. Backstreet Boys"
               class="w-full bg-inset border border-edge rounded-lg px-3.5 py-2.5 text-base sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 min-h-[44px]"
             />
           </div>
@@ -567,51 +559,6 @@
       <div id="suggestionReviewContainer" class="space-y-5"></div>
     </section>
 
-    <!-- ===================================================================
-         SECTION 3: ABOUT ANWYL 2
-         =================================================================== -->
-    <section id="view-about" class="hidden space-y-5">
-      <div class="bg-surface border border-edge rounded-xl p-5 sm:p-6 space-y-4">
-        <div class="space-y-1.5">
-          <h1 class="text-xl sm:text-2xl font-semibold text-zinc-100">About Anwyl 2</h1>
-          <p class="text-xs sm:text-sm text-zinc-400">Clean, accurate line distribution videos made with community input.</p>
-        </div>
-
-        <p class="text-sm text-zinc-300 leading-relaxed">
-          Anwyl 2 is an independent channel making color-coded line distribution videos, mostly western boybands.
-          This hub lets viewers request songs, vote on what comes next, and collaborate directly on synced lyrics and member color assignments.
-        </p>
-
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-          <div class="bg-inset border border-edge rounded-xl p-4 space-y-1">
-            <h2 class="text-sm font-semibold text-zinc-100">1. Request &amp; Vote</h2>
-            <p class="text-xs text-zinc-400 leading-relaxed">Search YouTube to submit a song request or upvote tracks you want to see next.</p>
-          </div>
-          <div class="bg-inset border border-edge rounded-xl p-4 space-y-1">
-            <h2 class="text-sm font-semibold text-zinc-100">2. Sync &amp; Assign</h2>
-            <p class="text-xs text-zinc-400 leading-relaxed">Import LRC timestamps, fine-tune line timing, and color-code lines or individual words.</p>
-          </div>
-          <div class="bg-inset border border-edge rounded-xl p-4 space-y-1">
-            <h2 class="text-sm font-semibold text-zinc-100">3. Collaborate</h2>
-            <p class="text-xs text-zinc-400 leading-relaxed">Suggest member parts on any project and review line-by-line community edits.</p>
-          </div>
-        </div>
-
-        <div class="pt-2">
-          <a
-            id="youtubeChannelLink"
-            href="https://youtube.com/@leejxnz"
-            target="_blank"
-            rel="noopener noreferrer"
-            class="inline-flex items-center gap-2 px-4 py-2.5 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs sm:text-sm font-semibold transition-colors min-h-[42px]"
-          >
-            <span>Visit YouTube Channel</span>
-            <span>&rarr;</span>
-          </a>
-        </div>
-      </div>
-    </section>
-
   </main>
 
   <!-- Toast Notification Container -->
@@ -671,7 +618,7 @@
             type="text"
             id="profileBioInput"
             maxlength="90"
-            placeholder="e.g. Line distribution editor & K-pop fan"
+            placeholder="e.g. Line distribution editor & 90s boyband fan"
             class="w-full bg-inset border border-edge rounded-lg px-3.5 py-2.5 text-base sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 min-h-[42px]"
           />
         </div>
@@ -807,10 +754,10 @@
     const SAMPLE_REQUESTS = [
       {
         id: 'sample-req-1',
-        youtube_video_id: 'Vk5-c_v4gMU',
-        title: "ILLIT (아일릿) 'Magnetic' Official MV",
-        channel_title: 'HYBE LABELS',
-        thumbnail_url: 'https://i.ytimg.com/vi/Vk5-c_v4gMU/hqdefault.jpg',
+        youtube_video_id: '4fndeDfaWCg',
+        title: "Backstreet Boys - I Want It That Way (Official HD Video)",
+        channel_title: 'Backstreet Boys',
+        thumbnail_url: 'https://i.ytimg.com/vi/4fndeDfaWCg/hqdefault.jpg',
         status: 'In Progress',
         votes_count: 14,
         requested_by_id: 'sample-user',
@@ -822,18 +769,18 @@
     const SAMPLE_PROJECTS = [
       {
         id: 'sample-proj-1',
-        song_title: 'Magnetic',
-        artist_name: 'ILLIT',
-        yt_music_url: 'https://music.youtube.com/watch?v=Vk5-c_v4gMU',
-        youtube_video_id: 'Vk5-c_v4gMU',
+        song_title: 'I Want It That Way',
+        artist_name: 'Backstreet Boys',
+        yt_music_url: 'https://music.youtube.com/watch?v=4fndeDfaWCg',
+        youtube_video_id: '4fndeDfaWCg',
         created_by_id: '0cb0cdec-e16a-496c-a8b4-c46769545317',
         created_by_name: 'Anwyl 2',
         created_at: new Date(Date.now() - 86400000).toISOString(),
         synced_lyrics: [
-          '[00:08.50] Baby, I’m just trying to play it cool',
-          '[00:12.20] But I just can’t hide that I want you',
-          '[00:16.10] Wait a minute 이게 뭐지? 내 심장이 lub-dub',
-          '[00:20.40] 자꾸만 뛰어 저 멀리서도 나의 맘이 들킬까 봐'
+          '[00:08.50] Sample line one',
+          '[00:12.20] Sample line two',
+          '[00:16.10] Sample line three',
+          '[00:20.40] Sample line four'
         ].join('\n')
       }
     ];
@@ -1353,7 +1300,7 @@
 
       state.activeTab = tabName;
 
-      const views = ['home', 'requests', 'projects', 'project-player', 'suggestion-review', 'about'];
+      const views = ['home', 'requests', 'projects', 'project-player', 'suggestion-review'];
       views.forEach((v) => {
         const el = document.getElementById(`view-${v}`);
         if (el) {
@@ -1361,7 +1308,7 @@
         }
       });
 
-      const navTabs = ['home', 'requests', 'projects', 'about'];
+      const navTabs = ['home', 'requests', 'projects'];
       const highlightedTab =
         tabName === 'project-player' || tabName === 'suggestion-review' ? 'projects' : tabName;
       navTabs.forEach((t) => {
@@ -3005,7 +2952,7 @@
               type="text"
               id="newMemberNameInput"
               maxlength="30"
-              placeholder="Member name (e.g. Wonhee)"
+              placeholder="Member name (e.g. Nick)"
               class="w-full sm:flex-1 bg-inset border border-edge rounded-lg px-3.5 py-2 text-base sm:text-xs text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 min-h-[40px]"
             />
             <div class="flex items-center gap-2">
