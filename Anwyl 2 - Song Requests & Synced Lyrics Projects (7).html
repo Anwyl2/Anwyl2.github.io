@@ -1,0 +1,3706 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Anwyl 2 — Line Distribution Requests &amp; Synced Lyrics</title>
+  <meta
+    name="description"
+    content="Request songs, vote on upcoming line distribution videos, and sync lyrics with member color distributions for Anwyl 2."
+  />
+  <meta name="theme-color" content="#09090b" />
+  <meta property="og:title" content="Anwyl 2 — Line Distribution Requests & Synced Lyrics" />
+  <meta
+    property="og:description"
+    content="Request songs, vote on upcoming line distribution videos, and sync lyrics with member color distributions."
+  />
+  <meta property="og:type" content="website" />
+  <link
+    rel="icon"
+    type="image/svg+xml"
+    href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%2318181b'/%3E%3Ctext x='50%25' y='54%25' dominant-baseline='middle' text-anchor='middle' fill='%23f4f4f5' font-family='system-ui,sans-serif' font-weight='700' font-size='28'%3EA2%3C/text%3E%3C/svg%3E"
+  />
+
+  <!-- Google Font: Inter & JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace']
+          },
+          colors: {
+            canvas: '#09090b',
+            surface: '#111114',
+            inset: '#18181c',
+            edge: '#27272a',
+            edgeHover: '#3f3f46'
+          }
+        }
+      }
+    };
+  </script>
+
+  <!-- Supabase JS Client (v2) -->
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+  <style>
+    /* Base dark styling & strict overflow guard so mobile never needs horizontal swipe */
+    html, body {
+      background-color: #09090b;
+      color: #f4f4f5;
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      max-width: 100%;
+      overflow-x: hidden;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    *, *::before, *::after {
+      box-sizing: border-box;
+    }
+
+    /* Subtle custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #09090b;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #27272a;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3f3f46;
+    }
+
+    /* Touch-friendly range slider for audio/video seek */
+    input[type="range"].studio-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      background: transparent;
+      cursor: pointer;
+      height: 28px;
+    }
+    input[type="range"].studio-slider::-webkit-slider-runnable-track {
+      height: 8px;
+      border-radius: 9999px;
+      background: #27272a;
+    }
+    input[type="range"].studio-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 20px;
+      height: 20px;
+      border-radius: 9999px;
+      background: #f4f4f5;
+      margin-top: -6px;
+      box-shadow: 0 1px 4px rgba(0, 0, 0, 0.7);
+    }
+    input[type="range"].studio-slider::-moz-range-track {
+      height: 8px;
+      border-radius: 9999px;
+      background: #27272a;
+    }
+    input[type="range"].studio-slider::-moz-range-thumb {
+      width: 20px;
+      height: 20px;
+      border: none;
+      border-radius: 9999px;
+      background: #f4f4f5;
+    }
+  </style>
+</head>
+<body class="bg-canvas text-zinc-100 min-h-screen w-full overflow-x-hidden flex flex-col antialiased selection:bg-zinc-700 selection:text-white">
+
+  <script>
+    /* =====================================================================
+       CONFIGURATION — SUPABASE (PRIMARY) & YOUTUBE DATA API v3
+       ===================================================================== */
+    const CONFIG = {
+      // 1. YouTube Data API v3 Key (Google Cloud Console -> Credentials)
+      YOUTUBE_API_KEY: "AIzaSyBae23gSw2WD3WINktcaBuq9fParAkyppU",
+
+      // 2. Supabase Project Credentials (PRIMARY Storage & Google OAuth)
+      SUPABASE_URL: "https://pbvvpxkxgflketuwkxmu.supabase.co",
+      SUPABASE_ANON_KEY: "sb_publishable_-NIkAzbYHDXY2Ltk35GqwA_nBKV89Rf",
+
+      // 3. Admin Supabase User UID(s)
+      ADMIN_USER_IDS: ["0cb0cdec-e16a-496c-a8b4-c46769545317"],
+
+      // 4. Channel info shown on the About page
+      YOUTUBE_CHANNEL_URL: "https://youtube.com/@leejxnz"
+    };
+  </script>
+
+  <!-- Top Navigation Header (Two-row mobile layout so tabs & buttons never squish) -->
+  <header class="sticky top-0 z-40 bg-canvas/95 backdrop-blur border-b border-edge w-full">
+    <div class="max-w-4xl mx-auto px-3.5 sm:px-6 py-2.5 sm:py-0 sm:h-16 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2.5">
+      <!-- Top Row: Brand & Account -->
+      <div class="flex items-center justify-between gap-2 min-w-0">
+        <button
+          type="button"
+          onclick="switchTab('requests')"
+          class="flex items-center gap-2.5 text-left focus:outline-none group min-w-0"
+        >
+          <div class="w-8 h-8 rounded-lg bg-zinc-100 text-zinc-950 font-bold text-sm flex items-center justify-center shrink-0">
+            A2
+          </div>
+          <div class="min-w-0">
+            <div class="text-base font-semibold tracking-tight text-zinc-100 group-hover:text-white leading-tight truncate">
+              Anwyl 2
+            </div>
+            <div class="text-[11px] text-zinc-500 hidden sm:block leading-tight">
+              Line Distribution &amp; Sync Studio
+            </div>
+          </div>
+        </button>
+
+        <!-- Mobile Account / Sign-In Area -->
+        <div id="authAreaMobile" class="flex sm:hidden items-center gap-2 shrink-0"></div>
+      </div>
+
+      <!-- Main Section Tabs (Full-width 3-column bar on mobile, compact inline on desktop) -->
+      <nav class="grid grid-cols-3 sm:flex items-center gap-1 bg-surface border border-edge rounded-xl p-1 w-full sm:w-auto" aria-label="Main navigation">
+        <button
+          type="button"
+          id="nav-requests"
+          onclick="switchTab('requests')"
+          class="px-2.5 sm:px-3.5 py-2 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors bg-zinc-800 text-zinc-100 text-center truncate"
+        >
+          Requests <span id="badge-requests" class="ml-0.5 text-[11px] text-zinc-400">0</span>
+        </button>
+        <button
+          type="button"
+          id="nav-projects"
+          onclick="switchTab('projects')"
+          class="px-2.5 sm:px-3.5 py-2 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors text-zinc-400 hover:text-zinc-200 text-center truncate"
+        >
+          Projects <span id="badge-projects" class="ml-0.5 text-[11px] text-zinc-500">0</span>
+        </button>
+        <button
+          type="button"
+          id="nav-about"
+          onclick="switchTab('about')"
+          class="px-2.5 sm:px-3.5 py-2 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors text-zinc-400 hover:text-zinc-200 text-center truncate"
+        >
+          About
+        </button>
+      </nav>
+
+      <!-- Desktop Account / Sign-In Area -->
+      <div id="authArea" class="hidden sm:flex items-center gap-2 shrink-0">
+        <button
+          type="button"
+          onclick="handleGoogleSignIn()"
+          class="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs sm:text-sm font-medium transition-colors min-h-[38px]"
+        >
+          <span>Sign in with Google</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content Container -->
+  <main class="flex-1 max-w-4xl w-full mx-auto px-3.5 sm:px-6 py-5 sm:py-8">
+
+    <!-- ===================================================================
+         SECTION 1: SONG REQUESTS
+         =================================================================== -->
+    <section id="view-requests" class="space-y-5 sm:space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+        <div>
+          <h1 class="text-xl sm:text-2xl font-semibold tracking-tight text-zinc-100">Song Requests</h1>
+          <p class="text-xs sm:text-sm text-zinc-400 mt-1 leading-relaxed">
+            Vote on songs you want to see in an Anwyl 2 line distribution video, or request a new track.
+          </p>
+        </div>
+      </div>
+
+      <!-- Admin Control Panel (Visible only when logged-in UID is in ADMIN_USER_IDS) -->
+      <div id="adminPanelBar" class="hidden bg-surface border border-emerald-500/30 rounded-xl p-4 space-y-2.5">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex items-center gap-2">
+            <span class="px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">
+              Admin Panel
+            </span>
+            <span class="text-xs font-medium text-zinc-200">Full Request &amp; Project Moderation Active</span>
+          </div>
+          <span id="adminConnectionLabel" class="text-[11px] font-mono text-zinc-400">Supabase Connected</span>
+        </div>
+        <div id="adminStatsSummary" class="flex flex-wrap items-center gap-3 text-xs text-zinc-400"></div>
+      </div>
+
+      <!-- Request Song Form Card -->
+      <div class="bg-surface border border-edge rounded-xl p-4 sm:p-5">
+        <!-- Signed-Out Prompt -->
+        <div id="requestSignInPrompt" class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="space-y-1">
+            <h2 class="text-sm font-medium text-zinc-100">Want to request or upvote a song?</h2>
+            <p class="text-xs text-zinc-400 leading-relaxed">Guests can browse all requests below. Sign in with Google to submit or vote.</p>
+          </div>
+          <button
+            type="button"
+            onclick="handleGoogleSignIn()"
+            class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-sm font-medium transition-colors shrink-0 min-h-[44px]"
+          >
+            <svg class="w-4 h-4" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"/>
+              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z"/>
+              <path fill="#FBBC05" d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z"/>
+              <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z"/>
+            </svg>
+            <span>Sign in with Google</span>
+          </button>
+        </div>
+
+        <!-- Signed-In YouTube Search & Submit -->
+        <div id="requestFormContainer" class="hidden space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+            <h2 class="text-sm font-semibold text-zinc-100">Request a Song</h2>
+            <span class="text-xs text-zinc-500">Search YouTube to pick the exact audio/MV</span>
+          </div>
+
+          <form onsubmit="event.preventDefault(); searchYouTubeSongs();" class="flex flex-col sm:flex-row gap-2.5">
+            <input
+              type="text"
+              id="ytSearchInput"
+              placeholder="Song title & artist (e.g. ILLIT Magnetic)..."
+              class="w-full flex-1 bg-inset border border-edge rounded-lg px-3.5 py-2.5 text-base sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 min-h-[44px]"
+            />
+            <button
+              type="submit"
+              id="ytSearchBtn"
+              class="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-edgeHover text-zinc-100 text-sm font-medium transition-colors shrink-0 min-h-[44px]"
+            >
+              Search YouTube
+            </button>
+          </form>
+
+          <!-- YouTube Search Results Grid -->
+          <div id="ytSearchResults" class="hidden space-y-2"></div>
+
+          <!-- Selected Video Confirmation Card -->
+          <div id="selectedYtSongBox" class="hidden bg-inset border border-edgeHover rounded-xl p-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="flex items-center gap-3 min-w-0">
+              <img
+                id="selectedYtThumb"
+                src="https://placehold.co/160x90/18181c/71717a?text=Video"
+                alt="Selected video thumbnail"
+                onerror="this.onerror=null;this.src='https://placehold.co/160x90/18181c/71717a?text=Video';"
+                class="w-20 h-12 rounded-lg object-cover bg-zinc-800 shrink-0"
+              />
+              <div class="min-w-0 flex-1">
+                <p id="selectedYtTitle" class="text-sm font-medium text-zinc-100 line-clamp-2"></p>
+                <p id="selectedYtChannel" class="text-xs text-zinc-400 truncate mt-0.5"></p>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 sm:flex items-center gap-2 w-full sm:w-auto shrink-0">
+              <button
+                type="button"
+                onclick="clearSelectedYouTubeSong()"
+                class="px-3 py-2.5 rounded-lg bg-surface hover:bg-zinc-800 border border-edge text-xs sm:text-sm text-zinc-300 min-h-[42px]"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                id="submitRequestBtn"
+                onclick="submitSongRequest()"
+                class="px-4 py-2.5 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs sm:text-sm font-semibold transition-colors min-h-[42px]"
+              >
+                Submit Request
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filter & Sort Bar -->
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+        <div class="flex flex-wrap items-center gap-1.5" role="group" aria-label="Filter requests by status">
+          <button type="button" id="filter-All" onclick="setRequestFilter('All')" class="px-3 py-2 rounded-lg text-xs font-medium bg-zinc-100 text-zinc-950 min-h-[38px]">All</button>
+          <button type="button" id="filter-Noted" onclick="setRequestFilter('Noted')" class="px-3 py-2 rounded-lg text-xs font-medium bg-surface border border-edge text-zinc-400 hover:text-zinc-200 min-h-[38px]">Noted</button>
+          <button type="button" id="filter-In Progress" onclick="setRequestFilter('In Progress')" class="px-3 py-2 rounded-lg text-xs font-medium bg-surface border border-edge text-zinc-400 hover:text-zinc-200 min-h-[38px]">In Progress</button>
+          <button type="button" id="filter-Done" onclick="setRequestFilter('Done')" class="px-3 py-2 rounded-lg text-xs font-medium bg-surface border border-edge text-zinc-400 hover:text-zinc-200 min-h-[38px]">Done</button>
+        </div>
+
+        <select
+          id="requestSortSelect"
+          onchange="renderRequestsList()"
+          aria-label="Sort requests"
+          class="w-full sm:w-auto bg-surface border border-edge rounded-lg px-3 py-2 text-base sm:text-xs text-zinc-300 focus:outline-none focus:border-zinc-500 min-h-[40px]"
+        >
+          <option value="votes">Sort: Most Voted</option>
+          <option value="newest">Sort: Newest</option>
+        </select>
+      </div>
+
+      <!-- Requests List -->
+      <div id="requestsList" class="space-y-3"></div>
+    </section>
+
+    <!-- ===================================================================
+         SECTION 2: SYNCED LYRICS PROJECTS
+         =================================================================== -->
+    <section id="view-projects" class="hidden space-y-5 sm:space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-end justify-between gap-2">
+        <div>
+          <h1 class="text-xl sm:text-2xl font-semibold tracking-tight text-zinc-100">Synced Lyrics Projects</h1>
+          <p class="text-xs sm:text-sm text-zinc-400 mt-1 leading-relaxed">
+            Open any project to play the imported YT Music track with live synced lyrics and custom line timing.
+          </p>
+        </div>
+      </div>
+
+      <!-- Create Project Card -->
+      <div class="bg-surface border border-edge rounded-xl p-4 sm:p-5">
+        <!-- Signed-Out Prompt -->
+        <div id="projectSignInPrompt" class="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div class="space-y-1">
+            <h2 class="text-sm font-medium text-zinc-100">Create a Synced Lyrics Project</h2>
+            <p class="text-xs text-zinc-400 leading-relaxed">Guests can open and play any project below. Sign in with Google to create or manage your own projects.</p>
+          </div>
+          <button
+            type="button"
+            onclick="handleGoogleSignIn()"
+            class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-sm font-medium transition-colors shrink-0 min-h-[44px]"
+          >
+            <svg class="w-4 h-4" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"/>
+              <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z"/>
+              <path fill="#FBBC05" d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z"/>
+              <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z"/>
+            </svg>
+            <span>Sign in with Google</span>
+          </button>
+        </div>
+
+        <!-- Signed-In Create Project Form -->
+        <div id="projectFormContainer" class="hidden space-y-4">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+            <h2 class="text-sm font-semibold text-zinc-100">New Project</h2>
+            <span class="text-xs text-zinc-500">Auto-imports LRC from LRClib</span>
+          </div>
+
+          <!-- Step 1: Song Title & Artist -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label for="projSongTitle" class="block text-xs font-medium text-zinc-400 mb-1.5">1. Song Title *</label>
+              <input
+                type="text"
+                id="projSongTitle"
+                oninput="scheduleAutoLrcSearch()"
+                placeholder="e.g. Supernova"
+                class="w-full bg-inset border border-edge rounded-lg px-3.5 py-2.5 text-base sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 min-h-[44px]"
+              />
+            </div>
+            <div>
+              <label for="projArtistName" class="block text-xs font-medium text-zinc-400 mb-1.5">Artist Name *</label>
+              <input
+                type="text"
+                id="projArtistName"
+                oninput="scheduleAutoLrcSearch()"
+                placeholder="e.g. aespa"
+                class="w-full bg-inset border border-edge rounded-lg px-3.5 py-2.5 text-base sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 min-h-[44px]"
+              />
+            </div>
+          </div>
+
+          <!-- Step 2: LRClib Synced Lyrics Import & Editable Textarea -->
+          <div class="space-y-2">
+            <div class="flex flex-wrap items-center justify-between gap-2">
+              <label for="projSyncedLyricsInput" class="text-xs font-medium text-zinc-400">
+                2. Synced Lyrics (Auto-imported from LRClib — editable)
+              </label>
+              <button
+                type="button"
+                id="lrcManualSearchBtn"
+                onclick="fetchLrclibLyrics(true)"
+                class="text-xs px-3 py-1.5 rounded-lg bg-inset hover:bg-zinc-800 border border-edge text-zinc-300 transition-colors min-h-[34px]"
+              >
+                Re-search LRClib
+              </button>
+            </div>
+
+            <!-- LRClib Status & Alternative Matches -->
+            <div id="lrcSearchStatus" class="hidden text-xs text-zinc-400 leading-relaxed"></div>
+            <div id="lrcMatchesBar" class="hidden flex flex-wrap gap-1.5"></div>
+
+            <textarea
+              id="projSyncedLyricsInput"
+              rows="6"
+              oninput="renderCreateLrcPreview()"
+              placeholder="[00:12.40] Synced lyrics from LRClib will appear here automatically when you enter a song title, or you can paste/retype your own [mm:ss.xx] lyrics..."
+              class="w-full bg-inset border border-edge rounded-lg px-3.5 py-2.5 text-base sm:text-sm font-mono text-zinc-100 placeholder-zinc-600 focus:outline-none focus:border-zinc-500 leading-relaxed"
+            ></textarea>
+
+            <!-- Live Parsed Synced Lyrics Display -->
+            <div id="createLrcPreviewBox" class="hidden bg-inset/70 border border-edge rounded-lg p-3 space-y-2">
+              <div class="flex items-center justify-between text-xs">
+                <span class="font-medium text-zinc-300">Synced Lyrics Preview</span>
+                <span id="createLrcLineCount" class="font-mono text-zinc-500">0 lines</span>
+              </div>
+              <div id="createLrcPreviewList" class="max-h-44 overflow-y-auto divide-y divide-edge/50 text-xs"></div>
+            </div>
+          </div>
+
+          <!-- Step 3: Import YT Music Link -->
+          <div class="space-y-2">
+            <label for="projYtMusicUrl" class="block text-xs font-medium text-zinc-400">
+              3. Import YT Music Link (for playback &amp; line resync)
+            </label>
+            <input
+              type="text"
+              id="projYtMusicUrl"
+              oninput="handleCreateYtMusicInput()"
+              placeholder="https://music.youtube.com/watch?v=... or https://youtu.be/..."
+              class="w-full bg-inset border border-edge rounded-lg px-3.5 py-2.5 text-base sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 min-h-[44px]"
+            />
+            <div id="createYtPreview" class="hidden bg-inset border border-edge rounded-lg p-2.5 flex items-center gap-3">
+              <img
+                id="createYtThumb"
+                src="https://placehold.co/160x90/18181c/71717a?text=YT+Music"
+                alt="YT Music preview"
+                onerror="this.onerror=null;this.src='https://placehold.co/160x90/18181c/71717a?text=YT+Music';"
+                class="w-16 h-10 rounded object-cover bg-zinc-800 shrink-0"
+              />
+              <div class="text-xs min-w-0">
+                <p class="text-zinc-200 font-medium">YT Music Track Linked</p>
+                <p id="createYtIdLabel" class="font-mono text-zinc-500 truncate"></p>
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-1">
+            <button
+              type="button"
+              id="createProjectSubmitBtn"
+              onclick="submitNewProject()"
+              class="w-full sm:w-auto sm:float-right px-5 py-2.5 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-sm font-semibold transition-colors min-h-[44px]"
+            >
+              Save Project
+            </button>
+            <div class="clear-both"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Saved Projects List -->
+      <div class="space-y-2.5">
+        <h2 class="text-xs font-semibold uppercase tracking-wider text-zinc-500">All Projects</h2>
+        <div id="projectsList" class="space-y-3"></div>
+      </div>
+    </section>
+
+    <!-- ===================================================================
+         SECTION 2B: PROJECT PLAYER & CUSTOM LINE RESYNC STUDIO
+         =================================================================== -->
+    <section id="view-project-player" class="hidden space-y-5">
+      <div id="projectPlayerContainer" class="space-y-4 sm:space-y-5"></div>
+    </section>
+
+    <!-- ===================================================================
+         SECTION 3: ABOUT ANWYL 2
+         =================================================================== -->
+    <section id="view-about" class="hidden space-y-6">
+      <div class="bg-surface border border-edge rounded-xl p-4 sm:p-7 space-y-5">
+        <div class="space-y-2">
+          <span class="inline-block text-xs font-mono uppercase tracking-wider text-zinc-400 bg-inset border border-edge px-2.5 py-1 rounded-md">
+            About the Channel
+          </span>
+          <h1 class="text-xl sm:text-2xl font-semibold tracking-tight text-zinc-100">Anwyl 2</h1>
+          <p class="text-sm text-zinc-300 leading-relaxed">
+            Anwyl 2 is a small, independent channel dedicated to clean, accurate, and easy-to-follow line distribution videos.
+          </p>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+          <div class="bg-inset border border-edge rounded-xl p-4 space-y-1.5">
+            <h2 class="text-sm font-semibold text-zinc-100">Community Song Requests</h2>
+            <p class="text-xs text-zinc-400 leading-relaxed">
+              Viewers can search YouTube, request tracks they want to see next, and upvote existing requests so popular songs rise to the top.
+            </p>
+          </div>
+          <div class="bg-inset border border-edge rounded-xl p-4 space-y-1.5">
+            <h2 class="text-sm font-semibold text-zinc-100">Synced Lyrics Workspace</h2>
+            <p class="text-xs text-zinc-400 leading-relaxed">
+              Creators can pair LRClib synced lyrics with a YT Music link and fine-tune line timestamps directly in the browser player.
+            </p>
+          </div>
+        </div>
+
+        <div class="pt-3 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-t border-edge">
+          <p class="text-xs text-zinc-500">Thank you for watching, requesting, and supporting Anwyl 2.</p>
+          <a
+            id="aboutChannelLink"
+            href="https://youtube.com/@leejxnz"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="w-full sm:w-auto inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-sm font-medium transition-colors min-h-[44px]"
+          >
+            Visit YouTube Channel
+          </a>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Minimal Footer -->
+  <footer class="border-t border-edge py-5 mt-8 w-full">
+    <div class="max-w-4xl mx-auto px-3.5 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs text-zinc-500 text-center sm:text-left">
+      <span>Anwyl 2 &mdash; Line Distribution Community Hub</span>
+      <span>Hosted on GitHub Pages</span>
+    </div>
+  </footer>
+
+  <!-- Toast Notification Container -->
+  <div id="toastContainer" class="fixed bottom-4 right-4 left-4 sm:left-auto z-50 flex flex-col items-end gap-2 pointer-events-none"></div>
+
+  <!-- Delete Confirmation Modal ("Are you sure?") -->
+  <div
+    id="confirmDeleteModal"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="confirmDeleteTitle"
+    class="hidden fixed inset-0 z-50 bg-black/75 backdrop-blur-sm flex items-center justify-center p-4"
+  >
+    <div class="bg-surface border border-edge rounded-xl max-w-sm w-full p-5 space-y-4">
+      <div class="space-y-1.5">
+        <h3 id="confirmDeleteTitle" class="text-base font-semibold text-zinc-100">Are you sure?</h3>
+        <p id="confirmDeleteMessage" class="text-xs text-zinc-400 leading-relaxed">
+          This item will be permanently deleted.
+        </p>
+      </div>
+      <div class="flex items-center justify-end gap-2">
+        <button
+          type="button"
+          onclick="closeConfirmDeleteModal()"
+          class="px-3.5 py-2 rounded-lg bg-inset hover:bg-zinc-800 border border-edge text-xs font-medium text-zinc-300 transition-colors min-h-[38px]"
+        >
+          Cancel
+        </button>
+        <button
+          type="button"
+          id="confirmDeleteActionBtn"
+          onclick="executeConfirmedDelete()"
+          class="px-4 py-2 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold transition-colors min-h-[38px]"
+        >
+          Yes, Delete
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- YouTube IFrame Player API -->
+  <script src="https://www.youtube.com/iframe_api"></script>
+
+  <script>
+    /* =====================================================================
+       APPLICATION STATE & STORAGE (SUPABASE PRIMARY + LOCALSTORAGE FALLBACK)
+       ===================================================================== */
+    let supabaseClient = null;
+    const isSupabaseConfigured =
+      Boolean(CONFIG.SUPABASE_URL) &&
+      CONFIG.SUPABASE_URL.startsWith('http') &&
+      Boolean(CONFIG.SUPABASE_ANON_KEY) &&
+      CONFIG.SUPABASE_ANON_KEY !== 'YOUR_SUPABASE_ANON_KEY';
+
+    const isYouTubeConfigured =
+      Boolean(CONFIG.YOUTUBE_API_KEY) &&
+      CONFIG.YOUTUBE_API_KEY !== 'YOUR_YOUTUBE_API_KEY';
+
+    const LOCAL_STORAGE_KEYS = {
+      REQUESTS: 'anwyl2_requests_v1',
+      VOTES: 'anwyl2_votes_v1',
+      PROJECTS: 'anwyl2_projects_v1'
+    };
+
+    const MEMBER_COLOR_PRESETS = [
+      '#ec4899', // Pink
+      '#38bdf8', // Sky Blue
+      '#a855f7', // Purple
+      '#34d399', // Emerald
+      '#f59e0b', // Amber
+      '#fb7185', // Rose
+      '#22d3ee', // Cyan
+      '#f97316'  // Orange
+    ];
+
+    const SAMPLE_REQUESTS = [
+      {
+        id: 'sample-req-1',
+        youtube_video_id: 'ArmDp-zijuc',
+        title: 'ILLIT (아일릿) ‘Magnetic’ Official MV',
+        channel_title: 'HYBE LABELS',
+        thumbnail_url: 'https://i.ytimg.com/vi/ArmDp-zijuc/mqdefault.jpg',
+        status: 'In Progress',
+        votes_count: 14,
+        requested_by_id: 'sample-user-a',
+        requested_by_name: 'Mina',
+        created_at: new Date(Date.now() - 86400000 * 2).toISOString()
+      },
+      {
+        id: 'sample-req-2',
+        youtube_video_id: 'phuiiNCxRMg',
+        title: 'aespa 에스파 ‘Supernova’ MV',
+        channel_title: 'SMTOWN',
+        thumbnail_url: 'https://i.ytimg.com/vi/phuiiNCxRMg/mqdefault.jpg',
+        status: 'Noted',
+        votes_count: 9,
+        requested_by_id: 'sample-user-b',
+        requested_by_name: 'Kenji',
+        created_at: new Date(Date.now() - 86400000).toISOString()
+      }
+    ];
+
+    const SAMPLE_PROJECTS = [
+      {
+        id: 'sample-proj-1',
+        song_title: 'Supernova',
+        artist_name: 'aespa',
+        yt_music_url: 'https://music.youtube.com/watch?v=phuiiNCxRMg',
+        youtube_video_id: 'phuiiNCxRMg',
+        synced_lyrics: [
+          '[00:14.20] I’m like some kind of Supernova',
+          '[00:18.10] Watch out',
+          '[00:21.50] Look at me go 재미 좀 볼',
+          '[00:25.00] 빛의 Core So hot hot',
+          '[00:28.80] 문이 열려 서로의 존재를 느껴',
+          '[00:32.40] 마치 Discord 날 닮은 너 너 누구야',
+          '[anwyl2_meta:{"members":[{"id":"m1","name":"Karina","color":"#ec4899"},{"id":"m2","name":"Winter","color":"#38bdf8"},{"id":"m3","name":"Giselle","color":"#a855f7"},{"id":"m4","name":"Ningning","color":"#f59e0b"}],"lines":[{"lineMembers":["m1"],"wordMembers":[[],[],[],[],[],["m1","m2"]]},{"lineMembers":["m2"],"wordMembers":[[],[]]},{"lineMembers":["m3"],"wordMembers":[[],[],[],[],[],[],[]]},{"lineMembers":["m4"],"wordMembers":[[],[],[],["m4","m1"],["m4","m1"]]},{"lineMembers":["m1","m2"],"wordMembers":[[],[],[],[],[]]},{"lineMembers":["m3","m4"],"wordMembers":[[],[],[],[],[],[],[]]}]}]'
+        ].join('\n'),
+        created_by_id: 'sample-creator-1',
+        created_by_name: 'Anwyl 2',
+        created_at: new Date(Date.now() - 3600000 * 5).toISOString()
+      }
+    ];
+
+    let state = {
+      user: null,
+      activeTab: 'requests',
+      requests: [],
+      userVotedRequestIds: new Set(),
+      requestFilter: 'All',
+      selectedYtVideo: null,
+      projects: [],
+      activeProjectId: null,
+      activeProjectLines: [],
+      activeProjectMembers: [],
+      activeBrushMemberId: null,
+      activeAssignTarget: null,
+      showProjectLrcImporter: false,
+      projectLrcSearchResults: [],
+      hasUnsavedSyncChanges: false,
+      isSavingSync: false,
+      autoScrollLyrics: true,
+      lrcDebounceTimer: null,
+      lrcResults: [],
+      ytApiLoaded: false,
+      ytPlayer: null,
+      ytPlayerReady: false,
+      playbackTimer: null,
+      currentPlaybackTime: 0,
+      playbackDuration: 0,
+      playbackRate: 1,
+      isPlaying: false,
+      activeLineIndex: -1,
+      pendingDeleteTarget: null,
+      supabaseOffline: false
+    };
+
+    // ---------------------------------------------------------------------
+    // 1. LOCALSTORAGE CACHE (OFFLINE FALLBACK ONLY)
+    // ---------------------------------------------------------------------
+    function loadFromLocalFallback() {
+      try {
+        const rawReq = localStorage.getItem(LOCAL_STORAGE_KEYS.REQUESTS);
+        const rawVotes = localStorage.getItem(LOCAL_STORAGE_KEYS.VOTES);
+        const rawProj = localStorage.getItem(LOCAL_STORAGE_KEYS.PROJECTS);
+
+        state.requests = rawReq ? JSON.parse(rawReq) : [...SAMPLE_REQUESTS];
+        state.projects = rawProj ? JSON.parse(rawProj) : [...SAMPLE_PROJECTS];
+        state.userVotedRequestIds = new Set(rawVotes ? JSON.parse(rawVotes) : []);
+      } catch (err) {
+        console.error('Local fallback cache load error:', err);
+        state.requests = [...SAMPLE_REQUESTS];
+        state.projects = [...SAMPLE_PROJECTS];
+        state.userVotedRequestIds = new Set();
+      }
+    }
+
+    function saveToLocalFallback() {
+      try {
+        localStorage.setItem(LOCAL_STORAGE_KEYS.REQUESTS, JSON.stringify(state.requests));
+        localStorage.setItem(LOCAL_STORAGE_KEYS.VOTES, JSON.stringify([...state.userVotedRequestIds]));
+        localStorage.setItem(LOCAL_STORAGE_KEYS.PROJECTS, JSON.stringify(state.projects));
+      } catch (err) {
+        console.error('Local fallback cache save error:', err);
+      }
+    }
+
+    function isNetworkOfflineError(err) {
+      if (!navigator.onLine) return true;
+      const msg = String((err && (err.message || err.details || err)) || '').toLowerCase();
+      return (
+        msg.includes('failed to fetch') ||
+        msg.includes('networkerror') ||
+        msg.includes('network request failed') ||
+        msg.includes('load failed') ||
+        msg.includes('fetch')
+      );
+    }
+
+    window.onYouTubeIframeAPIReady = function () {
+      state.ytApiLoaded = true;
+      if (state.activeTab === 'project-player' && state.activeProjectId) {
+        const proj = state.projects.find((p) => p.id === state.activeProjectId);
+        if (proj && proj.youtube_video_id && !state.ytPlayer) {
+          initYouTubePlayerForProject(proj.youtube_video_id);
+        }
+      }
+    };
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        const aboutLink = document.getElementById('aboutChannelLink');
+        if (aboutLink && CONFIG.YOUTUBE_CHANNEL_URL) {
+          aboutLink.href = CONFIG.YOUTUBE_CHANNEL_URL;
+        }
+
+        if (window.YT && window.YT.Player) {
+          state.ytApiLoaded = true;
+        }
+
+        if (isSupabaseConfigured && typeof window.supabase !== 'undefined') {
+          supabaseClient = window.supabase.createClient(
+            CONFIG.SUPABASE_URL,
+            CONFIG.SUPABASE_ANON_KEY
+          );
+
+          const { data: sessionData } = await supabaseClient.auth.getSession();
+          if (sessionData && sessionData.session && sessionData.session.user) {
+            setUserFromSupabase(sessionData.session.user);
+          }
+
+          supabaseClient.auth.onAuthStateChange(async (_event, session) => {
+            if (session && session.user) {
+              setUserFromSupabase(session.user);
+            } else {
+              state.user = null;
+              state.userVotedRequestIds.clear();
+            }
+            await loadAllData();
+          });
+
+          await loadAllData();
+        } else {
+          state.supabaseOffline = true;
+          loadFromLocalFallback();
+          renderAllUI();
+        }
+      } catch (err) {
+        console.error('Initialization error:', err);
+        state.supabaseOffline = true;
+        loadFromLocalFallback();
+        renderAllUI();
+      }
+    });
+
+    // ---------------------------------------------------------------------
+    // 2. AUTHENTICATION & ADMIN / OWNERSHIP PERMISSIONS
+    // ---------------------------------------------------------------------
+    function checkIsAdmin(supaUser) {
+      if (!supaUser || !supaUser.id) return false;
+      const appMeta = supaUser.app_metadata || {};
+      if (appMeta.role === 'admin') return true;
+      return (CONFIG.ADMIN_USER_IDS || []).some(
+        (adminUid) =>
+          typeof adminUid === 'string' &&
+          adminUid !== 'YOUR_SUPABASE_ADMIN_UID' &&
+          adminUid !== 'PASTE_YOUR_SUPABASE_ADMIN_UID_HERE' &&
+          adminUid.trim() === String(supaUser.id).trim()
+      );
+    }
+
+    function canManageProject(proj) {
+      if (!state.user || !proj) return false;
+      if (state.user.isAdmin) return true;
+      return Boolean(proj.created_by_id && state.user.id === proj.created_by_id);
+    }
+
+    function setUserFromSupabase(supaUser) {
+      const email = supaUser.email || '';
+      const meta = supaUser.user_metadata || {};
+      state.user = {
+        id: supaUser.id,
+        name: meta.full_name || meta.name || email.split('@')[0] || 'Viewer',
+        avatar_url: meta.avatar_url || meta.picture || '',
+        isAdmin: checkIsAdmin(supaUser)
+      };
+    }
+
+    async function handleGoogleSignIn() {
+      if (!isSupabaseConfigured || !supabaseClient) {
+        showToast('Supabase is not configured. Check SUPABASE_URL and SUPABASE_ANON_KEY.', 'error');
+        return;
+      }
+
+      try {
+        const redirectTo = window.location.origin + window.location.pathname;
+        const { error } = await supabaseClient.auth.signInWithOAuth({
+          provider: 'google',
+          options: { redirectTo }
+        });
+        if (error) throw error;
+      } catch (err) {
+        console.error('Google Sign-In error:', err);
+        showToast('Could not start Google Sign-In. Check Supabase Google Auth & Redirect URL settings.', 'error');
+      }
+    }
+
+    async function handleSignOut() {
+      closeConfirmDeleteModal();
+
+      if (!isSupabaseConfigured || !supabaseClient) {
+        state.user = null;
+        renderAllUI();
+        showToast('Signed out.', 'info');
+        return;
+      }
+
+      try {
+        await supabaseClient.auth.signOut();
+        state.user = null;
+        state.userVotedRequestIds.clear();
+        renderAllUI();
+        showToast('Signed out.', 'info');
+      } catch (err) {
+        console.error('Sign-out error:', err);
+        showToast('Error signing out.', 'error');
+      }
+    }
+
+    // ---------------------------------------------------------------------
+    // 2B. DELETE CONFIRMATION MODAL ("ARE YOU SURE?")
+    // ---------------------------------------------------------------------
+    function openConfirmDeleteModal(type, id, title) {
+      state.pendingDeleteTarget = { type, id, title };
+      const modal = document.getElementById('confirmDeleteModal');
+      const msgEl = document.getElementById('confirmDeleteMessage');
+      if (msgEl) {
+        const label = title ? `"${title}"` : type === 'project' ? 'this project' : 'this song request';
+        msgEl.textContent = `Are you sure you want to delete ${label}? This action cannot be undone.`;
+      }
+      if (modal) modal.classList.remove('hidden');
+    }
+
+    function closeConfirmDeleteModal() {
+      state.pendingDeleteTarget = null;
+      const modal = document.getElementById('confirmDeleteModal');
+      if (modal) modal.classList.add('hidden');
+    }
+
+    async function executeConfirmedDelete() {
+      const target = state.pendingDeleteTarget;
+      closeConfirmDeleteModal();
+      if (!target) return;
+
+      if (target.type === 'request') {
+        await performDeleteSongRequest(target.id);
+      } else if (target.type === 'project') {
+        await performDeleteProject(target.id);
+      }
+    }
+
+    // ---------------------------------------------------------------------
+    // 3. DATA LOADING (SUPABASE PRIMARY, LOCALSTORAGE OFFLBACK)
+    // ---------------------------------------------------------------------
+    async function loadAllData() {
+      if (!isSupabaseConfigured || !supabaseClient) {
+        state.supabaseOffline = true;
+        loadFromLocalFallback();
+        renderAllUI();
+        return;
+      }
+
+      try {
+        const [reqRes, votesRes, projRes] = await Promise.all([
+          supabaseClient
+            .from('song_requests')
+            .select('*')
+            .order('created_at', { ascending: false }),
+          supabaseClient
+            .from('request_votes')
+            .select('request_id, user_id'),
+          supabaseClient
+            .from('projects')
+            .select('*')
+            .order('created_at', { ascending: false })
+        ]);
+
+        if (reqRes.error) throw reqRes.error;
+        if (votesRes.error) throw votesRes.error;
+        if (projRes.error) throw projRes.error;
+
+        const voteCounts = {};
+        const userVotes = new Set();
+        (votesRes.data || []).forEach((v) => {
+          voteCounts[v.request_id] = (voteCounts[v.request_id] || 0) + 1;
+          if (state.user && v.user_id === state.user.id) {
+            userVotes.add(v.request_id);
+          }
+        });
+
+        state.supabaseOffline = false;
+        state.userVotedRequestIds = userVotes;
+        state.requests = (reqRes.data || []).map((r) => ({
+          ...r,
+          votes_count: voteCounts[r.id] || 0
+        }));
+
+        state.projects = projRes.data || [];
+        saveToLocalFallback();
+        renderAllUI();
+      } catch (err) {
+        console.error('Error loading Supabase data:', err);
+        state.supabaseOffline = true;
+        loadFromLocalFallback();
+        if (isNetworkOfflineError(err)) {
+          showToast('Supabase offline — loaded cached local data.', 'info');
+        } else {
+          showToast('Could not load Supabase tables. Using cached local fallback.', 'error');
+        }
+        renderAllUI();
+      }
+    }
+
+    // ---------------------------------------------------------------------
+    // 4. NAVIGATION, ADMIN PANEL & UI SHELL RENDERING
+    // ---------------------------------------------------------------------
+    function switchTab(tabName) {
+      if (state.activeTab === 'project-player' && tabName !== 'project-player') {
+        destroyYouTubePlayer();
+        state.activeProjectId = null;
+        closeConfirmDeleteModal();
+      }
+
+      state.activeTab = tabName;
+
+      const views = ['requests', 'projects', 'project-player', 'about'];
+      views.forEach((v) => {
+        const el = document.getElementById(`view-${v}`);
+        if (el) {
+          el.classList.toggle('hidden', v !== tabName);
+        }
+      });
+
+      const navTabs = ['requests', 'projects', 'about'];
+      const highlightedTab = tabName === 'project-player' ? 'projects' : tabName;
+      navTabs.forEach((t) => {
+        const btn = document.getElementById(`nav-${t}`);
+        if (!btn) return;
+        if (t === highlightedTab) {
+          btn.className = 'px-2.5 sm:px-3.5 py-2 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors bg-zinc-800 text-zinc-100 text-center truncate';
+        } else {
+          btn.className = 'px-2.5 sm:px-3.5 py-2 sm:py-1.5 rounded-lg text-xs sm:text-sm font-medium transition-colors text-zinc-400 hover:text-zinc-200 text-center truncate';
+        }
+      });
+
+      if (tabName === 'projects') {
+        renderProjectsList();
+      } else if (tabName === 'project-player') {
+        renderProjectPlayerView();
+      }
+    }
+
+    function updateNavBadges() {
+      const reqBadge = document.getElementById('badge-requests');
+      const projBadge = document.getElementById('badge-projects');
+      if (reqBadge) reqBadge.textContent = String(state.requests.length);
+      if (projBadge) projBadge.textContent = String(state.projects.length);
+    }
+
+    function renderAdminPanel() {
+      const panelBar = document.getElementById('adminPanelBar');
+      const statsEl = document.getElementById('adminStatsSummary');
+      const connEl = document.getElementById('adminConnectionLabel');
+      if (!panelBar) return;
+
+      const isAdmin = Boolean(state.user && state.user.isAdmin);
+      panelBar.classList.toggle('hidden', !isAdmin);
+      if (!isAdmin) return;
+
+      if (connEl) {
+        connEl.textContent = state.supabaseOffline ? 'Offline Fallback Cache' : 'Supabase Primary Active';
+        connEl.className = state.supabaseOffline
+          ? 'text-[11px] font-mono text-amber-400'
+          : 'text-[11px] font-mono text-emerald-400';
+      }
+
+      if (statsEl) {
+        const notedCount = state.requests.filter((r) => r.status === 'Noted').length;
+        const progressCount = state.requests.filter((r) => r.status === 'In Progress').length;
+        const doneCount = state.requests.filter((r) => r.status === 'Done').length;
+
+        statsEl.innerHTML = `
+          <span>Total Requests: <strong class="text-zinc-200">${state.requests.length}</strong></span>
+          <span>&middot;</span>
+          <span>Noted: <strong class="text-zinc-200">${notedCount}</strong></span>
+          <span>&middot;</span>
+          <span>In Progress: <strong class="text-amber-300">${progressCount}</strong></span>
+          <span>&middot;</span>
+          <span>Done: <strong class="text-emerald-300">${doneCount}</strong></span>
+          <span>&middot;</span>
+          <span>Projects: <strong class="text-zinc-200">${state.projects.length}</strong></span>
+        `;
+      }
+    }
+
+    function renderAllUI() {
+      renderAuthHeader();
+      renderAdminPanel();
+      updateNavBadges();
+
+      const signedIn = Boolean(state.user);
+      const reqPrompt = document.getElementById('requestSignInPrompt');
+      const reqForm = document.getElementById('requestFormContainer');
+      if (reqPrompt && reqForm) {
+        reqPrompt.classList.toggle('hidden', signedIn);
+        reqForm.classList.toggle('hidden', !signedIn);
+      }
+
+      const projPrompt = document.getElementById('projectSignInPrompt');
+      const projForm = document.getElementById('projectFormContainer');
+      if (projPrompt && projForm) {
+        projPrompt.classList.toggle('hidden', signedIn);
+        projForm.classList.toggle('hidden', !signedIn);
+      }
+
+      renderRequestsList();
+      renderProjectsList();
+
+      if (state.activeTab === 'project-player' && state.activeProjectId) {
+        renderProjectPlayerView();
+      }
+    }
+
+    function renderAuthHeader() {
+      const desktopArea = document.getElementById('authArea');
+      const mobileArea = document.getElementById('authAreaMobile');
+
+      const signedOutHtml = `
+        <button
+          type="button"
+          onclick="handleGoogleSignIn()"
+          class="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs sm:text-sm font-medium transition-colors min-h-[38px]"
+        >
+          <svg class="w-3.5 h-3.5 shrink-0" viewBox="0 0 24 24" aria-hidden="true">
+            <path fill="#4285F4" d="M23.49 12.27c0-.79-.07-1.54-.19-2.27H12v4.51h6.47c-.29 1.48-1.14 2.73-2.4 3.58v3h3.86c2.26-2.09 3.56-5.17 3.56-8.82z"/>
+            <path fill="#34A853" d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.86-3c-1.08.72-2.45 1.16-4.07 1.16-3.13 0-5.78-2.11-6.73-4.96H1.29v3.09C3.26 21.3 7.31 24 12 24z"/>
+            <path fill="#FBBC05" d="M5.27 14.29c-.25-.72-.38-1.49-.38-2.29s.14-1.57.38-2.29V6.62H1.29C.47 8.24 0 10.06 0 12s.47 3.76 1.29 5.38l3.98-3.09z"/>
+            <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.31 0 3.26 2.7 1.29 6.62l3.98 3.09c.95-2.85 3.6-4.96 6.73-4.96z"/>
+          </svg>
+          <span>Sign in with Google</span>
+        </button>
+      `;
+
+      if (!state.user) {
+        if (desktopArea) desktopArea.innerHTML = signedOutHtml;
+        if (mobileArea) mobileArea.innerHTML = signedOutHtml;
+        return;
+      }
+
+      const adminBadge = state.user.isAdmin
+        ? `<span class="px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wide rounded bg-emerald-500/15 text-emerald-300 border border-emerald-500/30">Admin</span>`
+        : '';
+
+      const signedInHtml = `
+        <div class="flex items-center gap-2 min-w-0">
+          <div class="flex items-center gap-1.5 text-xs text-zinc-300 min-w-0">
+            <span class="max-w-[96px] sm:max-w-[130px] truncate font-medium">${escapeHtml(state.user.name)}</span>
+            ${adminBadge}
+          </div>
+          <button
+            type="button"
+            onclick="handleSignOut()"
+            class="px-2.5 py-1.5 rounded-lg bg-surface hover:bg-zinc-800 border border-edge text-xs text-zinc-300 transition-colors min-h-[36px] shrink-0"
+          >
+            Sign out
+          </button>
+        </div>
+      `;
+
+      if (desktopArea) desktopArea.innerHTML = signedInHtml;
+      if (mobileArea) mobileArea.innerHTML = signedInHtml;
+    }
+
+    // ---------------------------------------------------------------------
+    // 5. YOUTUBE SEARCH & SONG REQUESTS (SUPABASE PRIMARY + LOCAL FALLBACK)
+    // ---------------------------------------------------------------------
+    async function searchYouTubeSongs() {
+      if (!state.user) {
+        showToast('Sign in with Google to search and request songs.', 'error');
+        return;
+      }
+
+      const input = document.getElementById('ytSearchInput');
+      const resultsBox = document.getElementById('ytSearchResults');
+      const searchBtn = document.getElementById('ytSearchBtn');
+      const query = (input ? input.value : '').trim();
+
+      if (!query) {
+        showToast('Enter a song name to search.', 'error');
+        return;
+      }
+
+      const directId = extractYouTubeVideoId(query);
+      if (directId) {
+        selectYouTubeSong({
+          videoId: directId,
+          title: `YouTube Video (${directId})`,
+          channelTitle: 'Direct YouTube Link',
+          thumbnailUrl: `https://i.ytimg.com/vi/${directId}/mqdefault.jpg`
+        });
+        return;
+      }
+
+      if (!isYouTubeConfigured) {
+        const demoMatches = [
+          {
+            videoId: 'ArmDp-zijuc',
+            title: `${query} (Official Audio / MV)`,
+            channelTitle: 'YouTube Preview Result',
+            thumbnailUrl: 'https://i.ytimg.com/vi/ArmDp-zijuc/mqdefault.jpg'
+          },
+          {
+            videoId: 'phuiiNCxRMg',
+            title: `${query} (Performance / Lyric Version)`,
+            channelTitle: 'YouTube Preview Result',
+            thumbnailUrl: 'https://i.ytimg.com/vi/phuiiNCxRMg/mqdefault.jpg'
+          }
+        ];
+        renderYouTubeSearchResults(demoMatches, true);
+        return;
+      }
+
+      try {
+        searchBtn.disabled = true;
+        searchBtn.textContent = 'Searching...';
+        resultsBox.classList.remove('hidden');
+        resultsBox.innerHTML = `<p class="text-xs text-zinc-400 py-2">Searching YouTube...</p>`;
+
+        const url = `https://www.googleapis.com/youtube/v3/search?part=snippet&type=video&maxResults=5&q=${encodeURIComponent(
+          query
+        )}&key=${encodeURIComponent(CONFIG.YOUTUBE_API_KEY)}`;
+
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (!response.ok) {
+          throw new Error((data.error && data.error.message) || 'YouTube API error');
+        }
+
+        const items = (data.items || []).map((item) => ({
+          videoId: item.id.videoId,
+          title: decodeHtmlEntities(item.snippet.title),
+          channelTitle: decodeHtmlEntities(item.snippet.channelTitle),
+          thumbnailUrl:
+            (item.snippet.thumbnails &&
+              (item.snippet.thumbnails.medium || item.snippet.thumbnails.default) &&
+              (item.snippet.thumbnails.medium || item.snippet.thumbnails.default).url) ||
+            `https://i.ytimg.com/vi/${item.id.videoId}/mqdefault.jpg`
+        }));
+
+        renderYouTubeSearchResults(items, false);
+      } catch (err) {
+        console.error('YouTube search error:', err);
+        resultsBox.innerHTML = `<p class="text-xs text-rose-400 py-2">YouTube search failed. You can also paste a full YouTube video link directly into the box above.</p>`;
+      } finally {
+        searchBtn.disabled = false;
+        searchBtn.textContent = 'Search YouTube';
+      }
+    }
+
+    function renderYouTubeSearchResults(items, isDemoMode) {
+      const resultsBox = document.getElementById('ytSearchResults');
+      if (!resultsBox) return;
+
+      if (!items || items.length === 0) {
+        resultsBox.classList.remove('hidden');
+        resultsBox.innerHTML = `<p class="text-xs text-zinc-400 py-2">No videos found. Try another keyword or paste a YouTube URL.</p>`;
+        return;
+      }
+
+      resultsBox.classList.remove('hidden');
+      const notice = isDemoMode
+        ? `<p class="text-[11px] text-zinc-500">Preview search results (add <code class="font-mono text-zinc-300">YOUTUBE_API_KEY</code> for live YouTube results, or paste any YouTube URL).</p>`
+        : '';
+
+      resultsBox.innerHTML = `
+        ${notice}
+        <div class="grid grid-cols-1 gap-2">
+          ${items
+            .map(
+              (item, idx) => `
+              <button
+                type="button"
+                onclick="selectYouTubeResultByIndex(${idx})"
+                class="w-full text-left bg-inset hover:bg-zinc-800/90 border border-edge hover:border-edgeHover rounded-lg p-2.5 flex items-center gap-3 transition-colors"
+              >
+                <img
+                  src="${escapeHtml(item.thumbnailUrl)}"
+                  alt="${escapeHtml(item.title || 'YouTube search thumbnail')}"
+                  onerror="this.onerror=null;this.src='https://placehold.co/160x90/18181c/71717a?text=Video';"
+                  class="w-20 h-12 rounded object-cover bg-zinc-800 shrink-0"
+                />
+                <div class="min-w-0 flex-1">
+                  <p class="text-xs sm:text-sm font-medium text-zinc-100 line-clamp-1">${escapeHtml(item.title)}</p>
+                  <p class="text-xs text-zinc-400 truncate mt-0.5">${escapeHtml(item.channelTitle)}</p>
+                </div>
+                <span class="text-xs font-medium text-zinc-300 px-2.5 py-1 rounded bg-surface border border-edge shrink-0">
+                  Pick
+                </span>
+              </button>
+            `
+            )
+            .join('')}
+        </div>
+      `;
+
+      window.__lastYtSearchItems = items;
+    }
+
+    function selectYouTubeResultByIndex(idx) {
+      const items = window.__lastYtSearchItems || [];
+      if (items[idx]) {
+        selectYouTubeSong(items[idx]);
+      }
+    }
+
+    function selectYouTubeSong(videoObj) {
+      state.selectedYtVideo = videoObj;
+      const resultsBox = document.getElementById('ytSearchResults');
+      const selectedBox = document.getElementById('selectedYtSongBox');
+
+      if (resultsBox) resultsBox.classList.add('hidden');
+      if (selectedBox) {
+        selectedBox.classList.remove('hidden');
+        document.getElementById('selectedYtThumb').src = videoObj.thumbnailUrl;
+        document.getElementById('selectedYtTitle').textContent = videoObj.title;
+        document.getElementById('selectedYtChannel').textContent = videoObj.channelTitle;
+      }
+    }
+
+    function clearSelectedYouTubeSong() {
+      state.selectedYtVideo = null;
+      const selectedBox = document.getElementById('selectedYtSongBox');
+      if (selectedBox) selectedBox.classList.add('hidden');
+    }
+
+    async function submitSongRequest() {
+      if (!state.user) {
+        showToast('Sign in with Google first.', 'error');
+        return;
+      }
+      if (!state.selectedYtVideo) {
+        showToast('Pick a song from YouTube search first.', 'error');
+        return;
+      }
+
+      const vid = state.selectedYtVideo;
+
+      // Duplicate prevention: if song already exists, add upvote instead
+      const existing = state.requests.find((r) => r.youtube_video_id === vid.videoId);
+      if (existing) {
+        clearSelectedYouTubeSong();
+        document.getElementById('ytSearchInput').value = '';
+        if (!state.userVotedRequestIds.has(existing.id)) {
+          await toggleRequestVote(existing.id);
+          showToast('That song was already requested — added your upvote!', 'info');
+        } else {
+          showToast('You already requested or upvoted this song.', 'info');
+        }
+        return;
+      }
+
+      const submitBtn = document.getElementById('submitRequestBtn');
+      try {
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Submitting...';
+
+        if (isSupabaseConfigured && supabaseClient) {
+          const { data: inserted, error } = await supabaseClient
+            .from('song_requests')
+            .insert({
+              youtube_video_id: vid.videoId,
+              title: vid.title,
+              channel_title: vid.channelTitle,
+              thumbnail_url: vid.thumbnailUrl,
+              status: 'Noted',
+              requested_by_id: state.user.id,
+              requested_by_name: state.user.name
+            })
+            .select()
+            .single();
+
+          if (error) {
+            if (error.code === '23505') {
+              await loadAllData();
+              showToast('This song was already requested!', 'info');
+              return;
+            }
+            throw error;
+          }
+
+          if (inserted) {
+            await supabaseClient.from('request_votes').insert({
+              request_id: inserted.id,
+              user_id: state.user.id
+            });
+          }
+
+          clearSelectedYouTubeSong();
+          document.getElementById('ytSearchInput').value = '';
+          await loadAllData();
+          showToast('Song request saved to Supabase!', 'success');
+          return;
+        }
+
+        throw new Error('Supabase client unavailable');
+      } catch (err) {
+        console.error('Submit request error:', err);
+        if (isNetworkOfflineError(err) || !isSupabaseConfigured) {
+          const newReq = {
+            id: 'local-req-' + Date.now(),
+            youtube_video_id: vid.videoId,
+            title: vid.title,
+            channel_title: vid.channelTitle,
+            thumbnail_url: vid.thumbnailUrl,
+            status: 'Noted',
+            votes_count: 1,
+            requested_by_id: state.user.id,
+            requested_by_name: state.user.name,
+            created_at: new Date().toISOString()
+          };
+          state.requests.unshift(newReq);
+          state.userVotedRequestIds.add(newReq.id);
+          saveToLocalFallback();
+          clearSelectedYouTubeSong();
+          document.getElementById('ytSearchInput').value = '';
+          renderAllUI();
+          showToast('Saved locally (Supabase offline).', 'info');
+        } else {
+          showToast('Failed to submit song request to Supabase.', 'error');
+        }
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Submit Request';
+      }
+    }
+
+    async function toggleRequestVote(requestId) {
+      if (!state.user) {
+        showToast('Sign in with Google to upvote requests.', 'error');
+        return;
+      }
+
+      const alreadyVoted = state.userVotedRequestIds.has(requestId);
+
+      try {
+        if (isSupabaseConfigured && supabaseClient) {
+          if (alreadyVoted) {
+            const { error } = await supabaseClient
+              .from('request_votes')
+              .delete()
+              .eq('request_id', requestId)
+              .eq('user_id', state.user.id);
+            if (error) throw error;
+          } else {
+            const { error } = await supabaseClient
+              .from('request_votes')
+              .insert({
+                request_id: requestId,
+                user_id: state.user.id
+              });
+            if (error) throw error;
+          }
+          await loadAllData();
+          return;
+        }
+        throw new Error('Supabase client unavailable');
+      } catch (err) {
+        console.error('Vote error:', err);
+        if (isNetworkOfflineError(err) || !isSupabaseConfigured) {
+          const req = state.requests.find((r) => r.id === requestId);
+          if (!req) return;
+          if (alreadyVoted) {
+            state.userVotedRequestIds.delete(requestId);
+            req.votes_count = Math.max(0, (req.votes_count || 1) - 1);
+          } else {
+            state.userVotedRequestIds.add(requestId);
+            req.votes_count = (req.votes_count || 0) + 1;
+          }
+          saveToLocalFallback();
+          renderAllUI();
+          showToast('Vote updated locally (Supabase offline).', 'info');
+        } else {
+          showToast('Could not update vote in Supabase.', 'error');
+        }
+      }
+    }
+
+    async function updateRequestStatus(requestId, newStatus) {
+      if (!state.user || !state.user.isAdmin) return;
+
+      try {
+        if (isSupabaseConfigured && supabaseClient) {
+          const { error } = await supabaseClient
+            .from('song_requests')
+            .update({ status: newStatus })
+            .eq('id', requestId);
+          if (error) throw error;
+          await loadAllData();
+          showToast(`Status updated to ${newStatus}.`, 'success');
+          return;
+        }
+        throw new Error('Supabase client unavailable');
+      } catch (err) {
+        console.error('Update status error:', err);
+        if (isNetworkOfflineError(err) || !isSupabaseConfigured) {
+          const req = state.requests.find((r) => r.id === requestId);
+          if (req) req.status = newStatus;
+          saveToLocalFallback();
+          renderAllUI();
+          showToast(`Status updated locally to ${newStatus} (Supabase offline).`, 'info');
+        } else {
+          showToast('Failed to update status in Supabase.', 'error');
+        }
+      }
+    }
+
+    async function deleteSongRequest(requestId) {
+      if (!state.user || !state.user.isAdmin) return;
+      const req = state.requests.find((r) => r.id === requestId);
+      openConfirmDeleteModal('request', requestId, req ? req.title : 'this song request');
+    }
+
+    async function performDeleteSongRequest(requestId) {
+      if (!state.user || !state.user.isAdmin) return;
+
+      try {
+        if (isSupabaseConfigured && supabaseClient) {
+          const { error } = await supabaseClient
+            .from('song_requests')
+            .delete()
+            .eq('id', requestId);
+          if (error) throw error;
+          await loadAllData();
+          showToast('Song request deleted.', 'success');
+          return;
+        }
+        throw new Error('Supabase client unavailable');
+      } catch (err) {
+        console.error('Delete request error:', err);
+        if (isNetworkOfflineError(err) || !isSupabaseConfigured) {
+          state.requests = state.requests.filter((r) => r.id !== requestId);
+          state.userVotedRequestIds.delete(requestId);
+          saveToLocalFallback();
+          renderAllUI();
+          showToast('Deleted locally (Supabase offline).', 'info');
+        } else {
+          showToast('Failed to delete song request from Supabase.', 'error');
+        }
+      }
+    }
+
+    function setRequestFilter(status) {
+      state.requestFilter = status;
+      const filters = ['All', 'Noted', 'In Progress', 'Done'];
+      filters.forEach((f) => {
+        const btn = document.getElementById(`filter-${f}`);
+        if (!btn) return;
+        if (f === status) {
+          btn.className = 'px-3 py-2 rounded-lg text-xs font-medium bg-zinc-100 text-zinc-950 min-h-[38px]';
+        } else {
+          btn.className = 'px-3 py-2 rounded-lg text-xs font-medium bg-surface border border-edge text-zinc-400 hover:text-zinc-200 min-h-[38px]';
+        }
+      });
+      renderRequestsList();
+    }
+
+    function getStatusBadgeHtml(status) {
+      if (status === 'Done') {
+        return `<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-emerald-500/15 text-emerald-300 border border-emerald-500/25">Done</span>`;
+      }
+      if (status === 'In Progress') {
+        return `<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-amber-500/15 text-amber-300 border border-amber-500/25">In Progress</span>`;
+      }
+      return `<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-zinc-800 text-zinc-300 border border-edgeHover">Noted</span>`;
+    }
+
+    function renderRequestsList() {
+      const listEl = document.getElementById('requestsList');
+      if (!listEl) return;
+
+      const sortMode = (document.getElementById('requestSortSelect') || {}).value || 'votes';
+
+      let items = [...state.requests];
+      if (state.requestFilter !== 'All') {
+        items = items.filter((r) => r.status === state.requestFilter);
+      }
+
+      items.sort((a, b) => {
+        if (sortMode === 'votes') {
+          const diff = (b.votes_count || 0) - (a.votes_count || 0);
+          if (diff !== 0) return diff;
+        }
+        return new Date(b.created_at) - new Date(a.created_at);
+      });
+
+      if (items.length === 0) {
+        listEl.innerHTML = `
+          <div class="bg-surface border border-edge rounded-xl p-8 text-center space-y-1">
+            <p class="text-sm font-medium text-zinc-300">No song requests found</p>
+            <p class="text-xs text-zinc-500">Try switching the filter or request a new song above.</p>
+          </div>
+        `;
+        return;
+      }
+
+      listEl.innerHTML = items
+        .map((req) => {
+          const hasVoted = state.userVotedRequestIds.has(req.id);
+          const ytUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(req.youtube_video_id)}`;
+
+          const adminControlsHtml =
+            state.user && state.user.isAdmin
+              ? `
+                <div class="flex items-center gap-2">
+                  <select
+                    aria-label="Change request status"
+                    onchange="updateRequestStatus('${req.id}', this.value)"
+                    class="bg-inset border border-edgeHover text-zinc-200 text-base sm:text-xs rounded-lg px-2.5 py-1.5 focus:outline-none min-h-[38px]"
+                  >
+                    <option value="Noted" ${req.status === 'Noted' ? 'selected' : ''}>Noted</option>
+                    <option value="In Progress" ${req.status === 'In Progress' ? 'selected' : ''}>In Progress</option>
+                    <option value="Done" ${req.status === 'Done' ? 'selected' : ''}>Done</option>
+                  </select>
+                  <button
+                    type="button"
+                    onclick="deleteSongRequest('${req.id}')"
+                    class="text-xs px-3 py-1.5 rounded-lg border transition-colors min-h-[38px] bg-inset hover:bg-zinc-800 border-edge text-zinc-400 hover:text-rose-400"
+                  >
+                    Delete
+                  </button>
+                </div>
+              `
+              : '';
+
+          return `
+            <article class="bg-surface border border-edge hover:border-edgeHover rounded-xl p-3.5 sm:p-4 transition-colors space-y-3">
+              <!-- Main Row: Thumbnail, Title & Upvote Button -->
+              <div class="flex items-start sm:items-center gap-3">
+                <a
+                  href="${ytUrl}"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  class="w-20 sm:w-28 aspect-video rounded-lg overflow-hidden bg-zinc-800 shrink-0 block mt-0.5 sm:mt-0"
+                >
+                  <img
+                    src="${escapeHtml(req.thumbnail_url)}"
+                    alt="${escapeHtml(req.title || 'Song request thumbnail')}"
+                    onerror="this.onerror=null;this.src='https://placehold.co/320x180/131316/71717a?text=YouTube';"
+                    class="w-full h-full object-cover"
+                  />
+                </a>
+
+                <div class="flex-1 min-w-0 space-y-1">
+                  <a
+                    href="${ytUrl}"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    class="block text-sm sm:text-base font-medium text-zinc-100 hover:text-white line-clamp-2 leading-snug"
+                  >
+                    ${escapeHtml(req.title)}
+                  </a>
+                  <p class="text-xs text-zinc-400 truncate">${escapeHtml(req.channel_title)}</p>
+                </div>
+
+                <button
+                  type="button"
+                  onclick="toggleRequestVote('${req.id}')"
+                  aria-pressed="${hasVoted ? 'true' : 'false'}"
+                  class="flex flex-col items-center justify-center px-2.5 sm:px-3 py-2 rounded-xl border text-xs font-medium transition-colors shrink-0 min-w-[52px] sm:min-w-[58px] min-h-[52px]"
+                  style="${hasVoted ? 'background-color:#f4f4f5;border-color:#f4f4f5;color:#09090b;' : ''}"
+                >
+                  <svg class="w-4 h-4 mb-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+                    <polyline points="18 15 12 9 6 15" />
+                  </svg>
+                  <span class="font-mono font-semibold">${req.votes_count || 0}</span>
+                </button>
+              </div>
+
+              <!-- Footer Metadata & Admin Controls Row -->
+              <div class="flex flex-wrap items-center justify-between gap-2 pt-2.5 border-t border-edge/60">
+                <div class="flex flex-wrap items-center gap-2 min-w-0">
+                  ${getStatusBadgeHtml(req.status)}
+                  <span class="text-xs text-zinc-500">
+                    By ${escapeHtml(req.requested_by_name)} &middot; ${formatRelativeTime(req.created_at)}
+                  </span>
+                </div>
+                ${adminControlsHtml}
+              </div>
+            </article>
+          `;
+        })
+        .join('');
+    }
+
+    // ---------------------------------------------------------------------
+    // 6. LRCLIB SYNCED LYRICS IMPORT & CREATE PROJECT (SUPABASE PRIMARY)
+    // ---------------------------------------------------------------------
+    function scheduleAutoLrcSearch() {
+      clearTimeout(state.lrcDebounceTimer);
+      state.lrcDebounceTimer = setTimeout(() => {
+        fetchLrclibLyrics(false);
+      }, 650);
+    }
+
+    async function fetchLrclibLyrics(isManualClick) {
+      const titleInput = document.getElementById('projSongTitle');
+      const artistInput = document.getElementById('projArtistName');
+      const statusEl = document.getElementById('lrcSearchStatus');
+      const matchesBar = document.getElementById('lrcMatchesBar');
+      const textarea = document.getElementById('projSyncedLyricsInput');
+
+      const trackName = (titleInput ? titleInput.value : '').trim();
+      const artistName = (artistInput ? artistInput.value : '').trim();
+
+      if (!trackName) {
+        if (isManualClick) {
+          showToast('Enter a song title first to search LRClib.', 'error');
+        }
+        return;
+      }
+
+      try {
+        if (statusEl) {
+          statusEl.classList.remove('hidden');
+          statusEl.textContent = `Searching LRClib for "${trackName}"...`;
+        }
+
+        const params = new URLSearchParams({ track_name: trackName });
+        if (artistName) params.set('artist_name', artistName);
+
+        const res = await fetch(`https://lrclib.net/api/search?${params.toString()}`);
+        if (!res.ok) throw new Error('LRClib request failed');
+
+        const records = await res.json();
+        const syncedMatches = (records || []).filter(
+          (item) => item && typeof item.syncedLyrics === 'string' && item.syncedLyrics.trim().length > 0
+        );
+
+        state.lrcResults = syncedMatches.slice(0, 5);
+
+        if (state.lrcResults.length === 0) {
+          if (statusEl) {
+            statusEl.textContent = 'No synced LRC found on LRClib for that title — you can paste or type [mm:ss.xx] lyrics manually below.';
+          }
+          if (matchesBar) matchesBar.classList.add('hidden');
+          return;
+        }
+
+        const bestMatch = state.lrcResults[0];
+        if (textarea) {
+          textarea.value = bestMatch.syncedLyrics.trim();
+        }
+        if (artistInput && !artistName && bestMatch.artistName) {
+          artistInput.value = bestMatch.artistName;
+        }
+
+        if (statusEl) {
+          statusEl.textContent = `Loaded synced lyrics from LRClib: "${bestMatch.trackName}" — ${bestMatch.artistName}`;
+        }
+
+        if (matchesBar) {
+          if (state.lrcResults.length > 1) {
+            matchesBar.classList.remove('hidden');
+            matchesBar.innerHTML = state.lrcResults
+              .map(
+                (m, idx) => `
+                  <button
+                    type="button"
+                    onclick="applyLrclibMatch(${idx})"
+                    class="text-[11px] px-2.5 py-1 rounded-md bg-inset hover:bg-zinc-800 border border-edge text-zinc-300 transition-colors"
+                  >
+                    ${escapeHtml(m.trackName)} &middot; ${escapeHtml(m.artistName)} (${formatSecondsToLrc(m.duration || 0).slice(0, 5)})
+                  </button>
+                `
+              )
+              .join('');
+          } else {
+            matchesBar.classList.add('hidden');
+          }
+        }
+
+        renderCreateLrcPreview();
+      } catch (err) {
+        console.error('LRClib search error:', err);
+        if (statusEl) {
+          statusEl.classList.remove('hidden');
+          statusEl.textContent = 'Could not reach LRClib right now. You can type or paste [mm:ss.xx] synced lyrics manually.';
+        }
+      }
+    }
+
+    function applyLrclibMatch(index) {
+      const match = state.lrcResults[index];
+      if (!match) return;
+
+      const textarea = document.getElementById('projSyncedLyricsInput');
+      const statusEl = document.getElementById('lrcSearchStatus');
+      if (textarea) {
+        textarea.value = match.syncedLyrics.trim();
+      }
+      if (statusEl) {
+        statusEl.textContent = `Loaded synced lyrics: "${match.trackName}" — ${match.artistName}`;
+      }
+      renderCreateLrcPreview();
+    }
+
+    function renderCreateLrcPreview() {
+      const textarea = document.getElementById('projSyncedLyricsInput');
+      const previewBox = document.getElementById('createLrcPreviewBox');
+      const countEl = document.getElementById('createLrcLineCount');
+      const listEl = document.getElementById('createLrcPreviewList');
+
+      if (!textarea || !previewBox || !listEl) return;
+
+      const lines = parseLrcLyrics(textarea.value);
+      if (lines.length === 0) {
+        previewBox.classList.add('hidden');
+        return;
+      }
+
+      previewBox.classList.remove('hidden');
+      if (countEl) countEl.textContent = `${lines.length} synced lines`;
+
+      listEl.innerHTML = lines
+        .map(
+          (line) => `
+            <div class="py-1.5 flex items-baseline gap-2.5">
+              <span class="font-mono text-[11px] text-zinc-500 shrink-0">[${formatSecondsToLrc(line.time)}]</span>
+              <span class="text-zinc-200">${escapeHtml(line.text)}</span>
+            </div>
+          `
+        )
+        .join('');
+    }
+
+    function handleCreateYtMusicInput() {
+      const input = document.getElementById('projYtMusicUrl');
+      const preview = document.getElementById('createYtPreview');
+      const thumb = document.getElementById('createYtThumb');
+      const idLabel = document.getElementById('createYtIdLabel');
+
+      if (!input || !preview) return;
+      const videoId = extractYouTubeVideoId(input.value);
+      if (!videoId) {
+        preview.classList.add('hidden');
+        return;
+      }
+
+      preview.classList.remove('hidden');
+      if (thumb) thumb.src = `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
+      if (idLabel) idLabel.textContent = `Video ID: ${videoId}`;
+    }
+
+    async function submitNewProject() {
+      if (!state.user) {
+        showToast('Sign in with Google to create a project.', 'error');
+        return;
+      }
+
+      const songTitle = (document.getElementById('projSongTitle').value || '').trim();
+      const artistName = (document.getElementById('projArtistName').value || '').trim();
+      const syncedLyrics = (document.getElementById('projSyncedLyricsInput').value || '').trim();
+      const ytMusicUrl = (document.getElementById('projYtMusicUrl').value || '').trim();
+      const youtubeVideoId = extractYouTubeVideoId(ytMusicUrl) || '';
+
+      if (!songTitle || !artistName) {
+        showToast('Please enter both Song Title and Artist Name.', 'error');
+        return;
+      }
+
+      if (ytMusicUrl && !youtubeVideoId) {
+        showToast('Please enter a valid YT Music or YouTube link.', 'error');
+        return;
+      }
+
+      const btn = document.getElementById('createProjectSubmitBtn');
+      try {
+        btn.disabled = true;
+        btn.textContent = 'Saving...';
+
+        if (isSupabaseConfigured && supabaseClient) {
+          const { data: inserted, error } = await supabaseClient
+            .from('projects')
+            .insert({
+              song_title: songTitle,
+              artist_name: artistName,
+              synced_lyrics: syncedLyrics,
+              yt_music_url: ytMusicUrl,
+              youtube_video_id: youtubeVideoId,
+              created_by_id: state.user.id,
+              created_by_name: state.user.name
+            })
+            .select()
+            .single();
+
+          if (error) throw error;
+
+          resetCreateProjectForm();
+          await loadAllData();
+          showToast('Project saved to Supabase!', 'success');
+          if (inserted && inserted.id) {
+            openProjectPlayer(inserted.id);
+          }
+          return;
+        }
+
+        throw new Error('Supabase client unavailable');
+      } catch (err) {
+        console.error('Create project error:', err);
+        if (isNetworkOfflineError(err) || !isSupabaseConfigured) {
+          const newProj = {
+            id: 'local-proj-' + Date.now(),
+            song_title: songTitle,
+            artist_name: artistName,
+            synced_lyrics: syncedLyrics,
+            yt_music_url: ytMusicUrl,
+            youtube_video_id: youtubeVideoId,
+            created_by_id: state.user.id,
+            created_by_name: state.user.name,
+            created_at: new Date().toISOString()
+          };
+          state.projects.unshift(newProj);
+          saveToLocalFallback();
+          resetCreateProjectForm();
+          renderAllUI();
+          showToast('Project saved locally (Supabase offline).', 'info');
+          openProjectPlayer(newProj.id);
+        } else {
+          showToast('Failed to save project to Supabase.', 'error');
+        }
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Save Project';
+      }
+    }
+
+    function resetCreateProjectForm() {
+      document.getElementById('projSongTitle').value = '';
+      document.getElementById('projArtistName').value = '';
+      document.getElementById('projSyncedLyricsInput').value = '';
+      document.getElementById('projYtMusicUrl').value = '';
+      document.getElementById('lrcSearchStatus').classList.add('hidden');
+      document.getElementById('lrcMatchesBar').classList.add('hidden');
+      document.getElementById('createLrcPreviewBox').classList.add('hidden');
+      document.getElementById('createYtPreview').classList.add('hidden');
+    }
+
+    // ---------------------------------------------------------------------
+    // 7. PROJECTS LIST & STRICT OWNERSHIP / ADMIN DELETION
+    // ---------------------------------------------------------------------
+    function renderProjectsList() {
+      const listEl = document.getElementById('projectsList');
+      if (!listEl) return;
+
+      if (state.projects.length === 0) {
+        listEl.innerHTML = `
+          <div class="bg-surface border border-edge rounded-xl p-8 text-center space-y-1">
+            <p class="text-sm font-medium text-zinc-300">No projects saved yet</p>
+            <p class="text-xs text-zinc-500">Sign in with Google above to create the first project.</p>
+          </div>
+        `;
+        return;
+      }
+
+      listEl.innerHTML = state.projects
+        .map((proj) => {
+          const lines = parseLrcLyrics(proj.synced_lyrics);
+          const canDelete = canManageProject(proj);
+
+          const thumbHtml = proj.youtube_video_id
+            ? `
+              <div class="w-20 sm:w-32 aspect-video rounded-lg overflow-hidden bg-zinc-800 shrink-0 relative">
+                <img
+                  src="https://i.ytimg.com/vi/${escapeHtml(proj.youtube_video_id)}/mqdefault.jpg"
+                  alt="${escapeHtml(proj.song_title || 'Project cover thumbnail')}"
+                  onerror="this.onerror=null;this.src='https://placehold.co/320x180/131316/71717a?text=YT+Music';"
+                  class="w-full h-full object-cover"
+                />
+              </div>
+            `
+            : `
+              <div class="w-20 sm:w-32 aspect-video rounded-lg bg-inset border border-edge flex items-center justify-center shrink-0 text-xs font-mono text-zinc-500">
+                LRC
+              </div>
+            `;
+
+          const deleteBtnHtml = canDelete
+            ? `
+              <button
+                type="button"
+                onclick="event.stopPropagation(); deleteProject('${proj.id}');"
+                class="inline-flex items-center justify-center px-3 py-2 rounded-lg text-xs font-medium border transition-colors min-h-[40px] shrink-0 bg-inset hover:bg-zinc-800 border-edge text-zinc-400 hover:text-rose-400"
+              >
+                Delete
+              </button>
+            `
+            : '';
+
+          return `
+            <article
+              onclick="openProjectPlayer('${proj.id}')"
+              role="button"
+              tabindex="0"
+              onkeydown="if(event.key === 'Enter' || event.key === ' '){ event.preventDefault(); openProjectPlayer('${proj.id}'); }"
+              class="bg-surface border border-edge hover:border-edgeHover rounded-xl p-3.5 sm:p-5 transition-colors cursor-pointer group space-y-3 sm:space-y-0 sm:flex sm:items-center sm:justify-between sm:gap-4"
+            >
+              <!-- Song Info Row -->
+              <div class="flex items-center gap-3 sm:gap-4 min-w-0 flex-1">
+                ${thumbHtml}
+                <div class="flex-1 min-w-0 space-y-1">
+                  <h3 class="text-base font-semibold text-zinc-100 group-hover:text-white truncate">
+                    ${escapeHtml(proj.song_title)}
+                  </h3>
+                  <p class="text-xs text-zinc-400 truncate">${escapeHtml(proj.artist_name)}</p>
+                  <div class="flex flex-wrap items-center gap-1.5 text-[11px] sm:text-xs text-zinc-500">
+                    <span class="font-mono text-zinc-300">${lines.length} lines</span>
+                    <span>&middot;</span>
+                    <span class="truncate">By ${escapeHtml(proj.created_by_name)} &middot; ${formatRelativeTime(proj.created_at)}</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Action Row (Full-width easy tap on mobile, right-aligned on desktop) -->
+              <div class="flex items-center gap-2 w-full sm:w-auto shrink-0 pt-2 sm:pt-0 border-t sm:border-t-0 border-edge/60">
+                ${deleteBtnHtml}
+                <span class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-3.5 py-2 rounded-lg text-xs font-medium bg-zinc-800 group-hover:bg-zinc-100 text-zinc-100 group-hover:text-zinc-950 transition-colors min-h-[40px]">
+                  <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+                    <polygon points="5 3 19 12 5 21 5 3" />
+                  </svg>
+                  <span>Open &amp; Sync</span>
+                </span>
+              </div>
+            </article>
+          `;
+        })
+        .join('');
+    }
+
+    async function deleteProject(projectId) {
+      const proj = state.projects.find((p) => p.id === projectId);
+      if (!proj) return;
+
+      if (!canManageProject(proj)) {
+        showToast('Only the project creator or admin can delete this project.', 'error');
+        return;
+      }
+
+      openConfirmDeleteModal('project', projectId, `${proj.song_title} — ${proj.artist_name}`);
+    }
+
+    async function performDeleteProject(projectId) {
+      const proj = state.projects.find((p) => p.id === projectId);
+      if (!proj || !canManageProject(proj)) return;
+
+      try {
+        if (isSupabaseConfigured && supabaseClient) {
+          const { error } = await supabaseClient
+            .from('projects')
+            .delete()
+            .eq('id', projectId);
+          if (error) throw error;
+        }
+
+        state.projects = state.projects.filter((p) => p.id !== projectId);
+        saveToLocalFallback();
+        updateNavBadges();
+
+        if (state.activeProjectId === projectId) {
+          destroyYouTubePlayer();
+          state.activeProjectId = null;
+          switchTab('projects');
+        } else {
+          renderProjectsList();
+        }
+
+        showToast('Project deleted.', 'success');
+      } catch (err) {
+        console.error('Delete project error:', err);
+        if (isNetworkOfflineError(err)) {
+          state.projects = state.projects.filter((p) => p.id !== projectId);
+          saveToLocalFallback();
+          updateNavBadges();
+          if (state.activeProjectId === projectId) {
+            destroyYouTubePlayer();
+            state.activeProjectId = null;
+            switchTab('projects');
+          } else {
+            renderProjectsList();
+          }
+          showToast('Deleted locally (Supabase offline).', 'info');
+        } else {
+          showToast('Could not delete project from Supabase.', 'error');
+        }
+      }
+    }
+
+    // ---------------------------------------------------------------------
+    // 8. PROJECT PLAYER, AUTO-LOCATE LINE & CUSTOM LINE RESYNC
+    // ---------------------------------------------------------------------
+    function openProjectPlayer(projectId) {
+      const proj = state.projects.find((p) => p.id === projectId);
+      if (!proj) return;
+
+      destroyYouTubePlayer();
+      const parsed = parseProjectDistribution(proj.synced_lyrics);
+      state.activeProjectId = projectId;
+      state.activeProjectLines = parsed.lines;
+      state.activeProjectMembers = parsed.members;
+      state.activeBrushMemberId = null;
+      state.activeAssignTarget = null;
+      state.showProjectLrcImporter = false;
+      state.projectLrcSearchResults = [];
+      state.hasUnsavedSyncChanges = false;
+      closeConfirmDeleteModal();
+      state.currentPlaybackTime = 0;
+      state.playbackDuration = 0;
+      state.playbackRate = 1;
+      state.isPlaying = false;
+      state.activeLineIndex = -1;
+
+      switchTab('project-player');
+    }
+
+    function renderProjectPlayerView() {
+      const container = document.getElementById('projectPlayerContainer');
+      if (!container) return;
+
+      const proj = state.projects.find((p) => p.id === state.activeProjectId);
+      if (!proj) {
+        switchTab('projects');
+        return;
+      }
+
+      const canSave = canManageProject(proj);
+
+      const playerSectionHtml = proj.youtube_video_id
+        ? `
+          <div class="bg-surface border border-edge rounded-xl p-3.5 sm:p-5 space-y-4">
+            <div class="flex flex-col sm:flex-row gap-3.5 sm:gap-4 items-center">
+              <!-- Embedded YT Music Player -->
+              <div class="w-full sm:w-56 aspect-video rounded-lg overflow-hidden bg-black border border-edge shrink-0">
+                <div id="ytProjectPlayerHost" class="w-full h-full"></div>
+              </div>
+
+              <!-- Transport Controls & Seek -->
+              <div class="w-full flex-1 space-y-3">
+                <div class="grid grid-cols-3 sm:flex sm:flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    id="playerPlayPauseBtn"
+                    onclick="toggleProjectPlayback()"
+                    class="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs sm:text-sm font-semibold transition-colors min-h-[44px]"
+                  >
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                      <polygon points="5 3 19 12 5 21 5 3" />
+                    </svg>
+                    <span>Play</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onclick="seekRelative(-3)"
+                    class="px-3 py-2.5 rounded-lg bg-inset hover:bg-zinc-800 border border-edge text-xs sm:text-sm font-mono text-zinc-300 transition-colors min-h-[44px]"
+                  >
+                    -3s
+                  </button>
+
+                  <button
+                    type="button"
+                    id="playbackSpeedBtn"
+                    onclick="cyclePlaybackSpeed()"
+                    class="px-3 py-2.5 rounded-lg bg-inset hover:bg-zinc-800 border border-edge text-xs sm:text-sm font-mono text-zinc-300 transition-colors min-h-[44px]"
+                  >
+                    ${state.playbackRate}x
+                  </button>
+                </div>
+
+                <!-- Seek Slider -->
+                <div class="space-y-1">
+                  <input
+                    type="range"
+                    id="playerSeekSlider"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    value="0"
+                    oninput="handleSeekSliderInput(this.value)"
+                    class="w-full studio-slider"
+                  />
+                  <div class="flex items-center justify-between text-xs font-mono text-zinc-400">
+                    <span id="playerCurrentTimeLabel">00:00.00</span>
+                    <span id="playerDurationLabel">00:00.00</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        `
+        : canSave
+        ? `
+          <div class="bg-surface border border-edge rounded-xl p-4 sm:p-5 space-y-3">
+            <p class="text-xs text-zinc-300 leading-relaxed">No YT Music link was attached to this project yet. Paste one below to play and resync:</p>
+            <div class="flex flex-col sm:flex-row gap-2">
+              <input
+                type="text"
+                id="attachPlayerYtUrl"
+                placeholder="https://music.youtube.com/watch?v=..."
+                class="w-full flex-1 bg-inset border border-edge rounded-lg px-3.5 py-2.5 text-base sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 min-h-[44px]"
+              />
+              <button
+                type="button"
+                onclick="attachYtUrlToActiveProject()"
+                class="w-full sm:w-auto px-4 py-2.5 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-sm font-medium transition-colors min-h-[44px]"
+              >
+                Attach &amp; Load
+              </button>
+            </div>
+          </div>
+        `
+        : `
+          <div class="bg-surface border border-edge rounded-xl p-4 sm:p-5">
+            <p class="text-xs text-zinc-400">No YT Music link was attached to this project.</p>
+          </div>
+        `;
+
+      const inProjectLrcImporterHtml =
+        canSave && state.showProjectLrcImporter
+          ? `
+            <div class="bg-surface border border-edgeHover rounded-xl p-3.5 sm:p-5 space-y-3">
+              <div class="flex items-center justify-between gap-2">
+                <div>
+                  <h3 class="text-sm font-semibold text-zinc-100">Import Synced Lyrics from LRClib</h3>
+                  <p class="text-xs text-zinc-400">Search LRClib and load synced lines into this project.</p>
+                </div>
+                <button
+                  type="button"
+                  onclick="toggleProjectLrcImporter(false)"
+                  class="px-2.5 py-1.5 rounded-lg bg-inset hover:bg-zinc-800 border border-edge text-xs text-zinc-400 hover:text-zinc-200"
+                >
+                  Close
+                </button>
+              </div>
+
+              <form onsubmit="event.preventDefault(); searchLrclibInsideProject();" class="grid grid-cols-1 sm:grid-cols-12 gap-2.5">
+                <input
+                  type="text"
+                  id="inProjLrcTitle"
+                  value="${escapeHtml(proj.song_title)}"
+                  placeholder="Song title..."
+                  class="sm:col-span-5 bg-inset border border-edge rounded-lg px-3 py-2 text-base sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 min-h-[42px]"
+                />
+                <input
+                  type="text"
+                  id="inProjLrcArtist"
+                  value="${escapeHtml(proj.artist_name)}"
+                  placeholder="Artist name..."
+                  class="sm:col-span-4 bg-inset border border-edge rounded-lg px-3 py-2 text-base sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 min-h-[42px]"
+                />
+                <button
+                  type="submit"
+                  id="inProjLrcSearchBtn"
+                  class="sm:col-span-3 px-3.5 py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs sm:text-sm font-semibold transition-colors min-h-[42px]"
+                >
+                  Search LRClib
+                </button>
+              </form>
+
+              <div id="inProjLrcResultsBox" class="space-y-2">
+                ${renderInProjectLrcResultsHtml()}
+              </div>
+            </div>
+          `
+          : '';
+
+      container.innerHTML = `
+        <!-- Top Back, Import LRClib, Delete & Save Bar -->
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+          <button
+            type="button"
+            onclick="switchTab('projects')"
+            class="w-full sm:w-auto inline-flex items-center justify-center sm:justify-start gap-1.5 px-3.5 py-2.5 rounded-lg bg-surface hover:bg-zinc-900 border border-edge text-xs sm:text-sm text-zinc-200 transition-colors min-h-[42px]"
+          >
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="15 18 9 12 15 6" />
+            </svg>
+            <span>Back to Projects</span>
+          </button>
+
+          <div class="flex flex-wrap items-center gap-2 w-full sm:w-auto">
+            ${
+              canSave
+                ? `
+                  <button
+                    type="button"
+                    onclick="toggleProjectLrcImporter()"
+                    class="flex-1 sm:flex-initial px-3.5 py-2.5 rounded-lg text-xs sm:text-sm font-medium bg-surface hover:bg-zinc-900 border border-edge text-zinc-200 transition-colors min-h-[42px]"
+                  >
+                    Import LRClib
+                  </button>
+                  <button
+                    type="button"
+                    onclick="deleteProject('${proj.id}')"
+                    class="flex-1 sm:flex-initial px-3.5 py-2.5 rounded-lg text-xs sm:text-sm font-medium border transition-colors min-h-[42px] bg-surface hover:bg-zinc-900 border-edge text-zinc-400 hover:text-rose-400"
+                  >
+                    Delete
+                  </button>
+                  <button
+                    type="button"
+                    id="saveSyncChangesBtn"
+                    onclick="saveResyncedProject()"
+                    ${state.isSavingSync ? 'disabled' : ''}
+                    class="w-full sm:w-auto px-4 py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-colors min-h-[42px] ${
+                      state.hasUnsavedSyncChanges
+                        ? 'bg-zinc-100 hover:bg-white text-zinc-950'
+                        : 'bg-surface hover:bg-zinc-900 border border-edge text-zinc-300'
+                    }"
+                  >
+                    ${state.isSavingSync ? 'Saving...' : state.hasUnsavedSyncChanges ? 'Save Changes' : 'Saved'}
+                  </button>
+                `
+                : `<span class="text-xs text-zinc-500">Sign in as project creator to edit or delete</span>`
+            }
+          </div>
+        </div>
+
+        <!-- Song Header -->
+        <div class="pt-0.5">
+          <h1 class="text-xl sm:text-2xl font-semibold text-zinc-100 leading-snug">${escapeHtml(proj.song_title)}</h1>
+          <p class="text-xs sm:text-sm text-zinc-400 mt-0.5">${escapeHtml(proj.artist_name)} &middot; Created by ${escapeHtml(proj.created_by_name)}</p>
+        </div>
+
+        <!-- In-Project LRClib Importer Panel -->
+        ${inProjectLrcImporterHtml}
+
+        <!-- Music Player Card -->
+        ${playerSectionHtml}
+
+        <!-- Members & Colors Panel -->
+        <div id="projectMembersPanel" class="bg-surface border border-edge rounded-xl p-3.5 sm:p-5 space-y-3.5"></div>
+
+        <!-- Synced Lyrics, Line/Word Assignment & Custom Resync Panel -->
+        <div class="bg-surface border border-edge rounded-xl overflow-hidden">
+          <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 px-3.5 sm:px-4 py-3 border-b border-edge bg-inset/60">
+            <div class="space-y-0.5">
+              <div class="flex items-center gap-2">
+                <h2 class="text-sm font-semibold text-zinc-100">Synced Lyrics &amp; Distribution</h2>
+                <span class="text-xs font-mono text-zinc-500">(${state.activeProjectLines.length} lines)</span>
+              </div>
+              <p class="text-[11px] text-zinc-400">
+                ${
+                  canSave
+                    ? 'Tap "Line" for whole-line singer(s), or tap any word to assign word singer(s). 2+ members auto-create a gradient.'
+                    : 'Viewing line and word member assignments.'
+                }
+              </p>
+            </div>
+
+            <div class="flex items-center gap-2 w-full sm:w-auto">
+              ${
+                canSave
+                  ? `
+                    <button
+                      type="button"
+                      onclick="sortActiveLinesByTime()"
+                      class="flex-1 sm:flex-initial text-xs px-3 py-2 rounded-lg bg-surface hover:bg-zinc-800 border border-edge text-zinc-300 transition-colors min-h-[38px]"
+                    >
+                      Sort by Time
+                    </button>
+                  `
+                  : ''
+              }
+
+              <button
+                type="button"
+                id="autoLocateToggleBtn"
+                onclick="toggleAutoScrollLyrics()"
+                aria-pressed="${state.autoScrollLyrics ? 'true' : 'false'}"
+                class="flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-colors min-h-[38px] ${
+                  state.autoScrollLyrics
+                    ? 'bg-zinc-100 border-zinc-100 text-zinc-950'
+                    : 'bg-surface hover:bg-zinc-800 border-edge text-zinc-400'
+                }"
+              >
+                <span class="w-2 h-2 rounded-full ${state.autoScrollLyrics ? 'bg-emerald-500' : 'bg-zinc-600'}"></span>
+                <span>Auto-Locate: ${state.autoScrollLyrics ? 'ON' : 'OFF'}</span>
+              </button>
+            </div>
+          </div>
+
+          <div id="projectSyncLinesList" class="divide-y divide-edge/70 max-h-[68vh] overflow-y-auto"></div>
+        </div>
+      `;
+
+      renderProjectMembersPanel();
+      renderProjectSyncLinesList();
+
+      if (proj.youtube_video_id) {
+        initYouTubePlayerForProject(proj.youtube_video_id);
+      }
+    }
+
+    // ---------------------------------------------------------------------
+    // 8B. IN-PROJECT LRCLIB IMPORTER
+    // ---------------------------------------------------------------------
+    function toggleProjectLrcImporter(forceState) {
+      const next = typeof forceState === 'boolean' ? forceState : !state.showProjectLrcImporter;
+      state.showProjectLrcImporter = next;
+      renderProjectPlayerView();
+      if (next && state.projectLrcSearchResults.length === 0) {
+        searchLrclibInsideProject();
+      }
+    }
+
+    async function searchLrclibInsideProject() {
+      const titleEl = document.getElementById('inProjLrcTitle');
+      const artistEl = document.getElementById('inProjLrcArtist');
+      const btnEl = document.getElementById('inProjLrcSearchBtn');
+      const resultsEl = document.getElementById('inProjLrcResultsBox');
+
+      const trackName = (titleEl ? titleEl.value : '').trim();
+      const artistName = (artistEl ? artistEl.value : '').trim();
+
+      if (!trackName) {
+        showToast('Enter a song title to search LRClib.', 'error');
+        return;
+      }
+
+      try {
+        if (btnEl) {
+          btnEl.disabled = true;
+          btnEl.textContent = 'Searching...';
+        }
+        if (resultsEl) {
+          resultsEl.innerHTML = `<p class="text-xs text-zinc-400 py-1">Searching LRClib for "${escapeHtml(trackName)}"...</p>`;
+        }
+
+        const params = new URLSearchParams({ track_name: trackName });
+        if (artistName) params.set('artist_name', artistName);
+
+        const res = await fetch(`https://lrclib.net/api/search?${params.toString()}`);
+        if (!res.ok) throw new Error('LRClib search failed');
+
+        const records = await res.json();
+        state.projectLrcSearchResults = (records || [])
+          .filter((r) => r && typeof r.syncedLyrics === 'string' && r.syncedLyrics.trim().length > 0)
+          .slice(0, 6);
+
+        if (resultsEl) {
+          resultsEl.innerHTML = renderInProjectLrcResultsHtml();
+        }
+      } catch (err) {
+        console.error('In-project LRClib search error:', err);
+        if (resultsEl) {
+          resultsEl.innerHTML = `<p class="text-xs text-rose-400 py-1">Could not reach LRClib right now. Try again shortly.</p>`;
+        }
+      } finally {
+        if (btnEl) {
+          btnEl.disabled = false;
+          btnEl.textContent = 'Search LRClib';
+        }
+      }
+    }
+
+    function renderInProjectLrcResultsHtml() {
+      if (!state.projectLrcSearchResults || state.projectLrcSearchResults.length === 0) {
+        return `<p class="text-xs text-zinc-500">No synced LRClib matches shown yet. Click Search LRClib above.</p>`;
+      }
+
+      return `
+        <div class="grid grid-cols-1 gap-2 pt-1">
+          ${state.projectLrcSearchResults
+            .map((item, idx) => {
+              const lineCount = parseLrcLyrics(item.syncedLyrics).length;
+              return `
+                <div class="bg-inset border border-edge rounded-lg p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div class="min-w-0">
+                    <p class="text-xs sm:text-sm font-medium text-zinc-100 truncate">${escapeHtml(item.trackName)}</p>
+                    <p class="text-xs text-zinc-400 truncate">
+                      ${escapeHtml(item.artistName)} &middot; <span class="font-mono">${formatSecondsToLrc(item.duration || 0).slice(0, 5)}</span> &middot; ${lineCount} synced lines
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onclick="applyInProjectLrclibMatch(${idx})"
+                    class="w-full sm:w-auto px-3.5 py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-semibold transition-colors shrink-0 min-h-[38px]"
+                  >
+                    Import Lyrics
+                  </button>
+                </div>
+              `;
+            })
+            .join('')}
+        </div>
+      `;
+    }
+
+    function applyInProjectLrclibMatch(index) {
+      const match = state.projectLrcSearchResults[index];
+      if (!match) return;
+
+      const parsedLines = parseLrcLyrics(match.syncedLyrics).map((line) => {
+        const words = tokenizeLineWords(line.text);
+        return {
+          time: line.time,
+          text: line.text,
+          words: words,
+          lineMembers: [],
+          wordMembers: words.map(() => [])
+        };
+      });
+
+      state.activeProjectLines = parsedLines;
+      state.activeAssignTarget = null;
+      state.activeLineIndex = -1;
+      state.showProjectLrcImporter = false;
+      markSyncDirty();
+      renderProjectPlayerView();
+      showToast(`Imported ${parsedLines.length} synced lines from LRClib!`, 'success');
+    }
+
+    // ---------------------------------------------------------------------
+    // 8C. MEMBERS & COLORS MANAGEMENT
+    // ---------------------------------------------------------------------
+    function renderProjectMembersPanel() {
+      const panelEl = document.getElementById('projectMembersPanel');
+      if (!panelEl) return;
+
+      const proj = state.projects.find((p) => p.id === state.activeProjectId);
+      const canEdit = canManageProject(proj);
+
+      const defaultColor =
+        MEMBER_COLOR_PRESETS[state.activeProjectMembers.length % MEMBER_COLOR_PRESETS.length] || '#ec4899';
+
+      const activeBrushMember = state.activeProjectMembers.find((m) => m.id === state.activeBrushMemberId) || null;
+
+      const addMemberFormHtml = canEdit
+        ? `
+          <form onsubmit="event.preventDefault(); addProjectMember();" class="flex flex-col sm:flex-row sm:items-center gap-2.5">
+            <input
+              type="text"
+              id="newMemberNameInput"
+              placeholder="Member name (e.g. Karina)..."
+              class="w-full sm:flex-1 bg-inset border border-edge rounded-lg px-3.5 py-2 text-base sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 min-h-[42px]"
+            />
+            <div class="flex items-center gap-2">
+              <label class="inline-flex items-center gap-2 px-2.5 py-1.5 rounded-lg bg-inset border border-edge cursor-pointer min-h-[42px]" title="Choose member color">
+                <input
+                  type="color"
+                  id="newMemberColorInput"
+                  value="${defaultColor}"
+                  class="w-7 h-7 rounded bg-transparent border-0 cursor-pointer p-0"
+                />
+                <span class="text-xs text-zinc-400">Color</span>
+              </label>
+
+              <div class="hidden md:flex items-center gap-1">
+                ${MEMBER_COLOR_PRESETS.map(
+                  (hex) => `
+                    <button
+                      type="button"
+                      onclick="setMemberColorPickerValue('${hex}')"
+                      aria-label="Select color ${hex}"
+                      class="w-5 h-5 rounded-full border border-white/20 hover:scale-110 transition-transform"
+                      style="background-color: ${hex};"
+                    ></button>
+                  `
+                ).join('')}
+              </div>
+
+              <button
+                type="submit"
+                class="flex-1 sm:flex-initial px-4 py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs sm:text-sm font-semibold transition-colors min-h-[42px] shrink-0"
+              >
+                + Add Member
+              </button>
+            </div>
+          </form>
+        `
+        : '';
+
+      const membersChipsHtml =
+        state.activeProjectMembers.length > 0
+          ? `
+            <div class="flex flex-wrap items-center gap-2">
+              ${state.activeProjectMembers
+                .map((m) => {
+                  const safeColor = sanitizeHexColor(m.color);
+                  const isBrushSelected = state.activeBrushMemberId === m.id;
+                  return `
+                    <div
+                      class="inline-flex items-center rounded-lg border transition-all ${
+                        isBrushSelected
+                          ? 'bg-zinc-800 border-zinc-100 ring-1 ring-zinc-100'
+                          : 'bg-inset border-edge hover:border-edgeHover'
+                      }"
+                    >
+                      <button
+                        type="button"
+                        ${canEdit ? `onclick="toggleMemberBrush('${m.id}')"` : 'disabled'}
+                        class="inline-flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-zinc-100 min-h-[36px]"
+                      >
+                        <span class="w-3 h-3 rounded-full shrink-0" style="background-color: ${safeColor};"></span>
+                        <span>${escapeHtml(m.name)}</span>
+                      </button>
+                      ${
+                        canEdit
+                          ? `
+                            <button
+                              type="button"
+                              onclick="removeProjectMember('${m.id}')"
+                              aria-label="Remove ${escapeHtml(m.name)}"
+                              class="px-2 py-1.5 text-zinc-500 hover:text-rose-400 text-xs min-h-[36px]"
+                            >
+                              &times;
+                            </button>
+                          `
+                          : ''
+                      }
+                    </div>
+                  `;
+                })
+                .join('')}
+            </div>
+          `
+          : `<p class="text-xs text-zinc-500">No members added yet. Add member names and colors above to assign lines and words.</p>`;
+
+      const brushBannerHtml =
+        canEdit && activeBrushMember
+          ? `
+            <div class="bg-inset border border-edgeHover rounded-lg px-3 py-2 flex items-center justify-between gap-2 text-xs">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: ${sanitizeHexColor(activeBrushMember.color)};"></span>
+                <span class="text-zinc-200 truncate">
+                  Quick Brush: <strong>${escapeHtml(activeBrushMember.name)}</strong> &mdash; tap words or "Line" to toggle
+                </span>
+              </div>
+              <button
+                type="button"
+                onclick="toggleMemberBrush(null)"
+                class="text-zinc-400 hover:text-white underline underline-offset-2 shrink-0"
+              >
+                Off
+              </button>
+            </div>
+          `
+          : '';
+
+      panelEl.innerHTML = `
+        <div class="flex items-center justify-between gap-2">
+          <div>
+            <h2 class="text-sm font-semibold text-zinc-100">Members &amp; Colors</h2>
+            <p class="text-[11px] text-zinc-400">
+              ${canEdit ? 'Add singers & colors. Tap a member chip for Quick Brush, or tap any word/line below.' : 'Singers assigned in this project'}
+            </p>
+          </div>
+          <span class="text-xs font-mono text-zinc-500">${state.activeProjectMembers.length} members</span>
+        </div>
+
+        ${addMemberFormHtml}
+        ${membersChipsHtml}
+        ${brushBannerHtml}
+      `;
+    }
+
+    function setMemberColorPickerValue(hex) {
+      const picker = document.getElementById('newMemberColorInput');
+      if (picker) picker.value = hex;
+    }
+
+    function addProjectMember() {
+      const proj = state.projects.find((p) => p.id === state.activeProjectId);
+      if (!canManageProject(proj)) return;
+
+      const nameInput = document.getElementById('newMemberNameInput');
+      const colorInput = document.getElementById('newMemberColorInput');
+      const name = (nameInput ? nameInput.value : '').trim();
+      const color = sanitizeHexColor(colorInput ? colorInput.value : '#ec4899');
+
+      if (!name) {
+        showToast('Enter a member name first.', 'error');
+        return;
+      }
+
+      const duplicate = state.activeProjectMembers.some(
+        (m) => m.name.toLowerCase() === name.toLowerCase()
+      );
+      if (duplicate) {
+        showToast('That member is already added.', 'info');
+        return;
+      }
+
+      const newMember = {
+        id: 'mem-' + Date.now() + '-' + Math.random().toString(36).slice(2, 6),
+        name: name,
+        color: color
+      };
+
+      state.activeProjectMembers.push(newMember);
+      markSyncDirty();
+      renderProjectMembersPanel();
+      renderProjectSyncLinesList();
+
+      const nextInput = document.getElementById('newMemberNameInput');
+      if (nextInput) nextInput.focus();
+    }
+
+    function removeProjectMember(memberId) {
+      const proj = state.projects.find((p) => p.id === state.activeProjectId);
+      if (!canManageProject(proj)) return;
+
+      state.activeProjectMembers = state.activeProjectMembers.filter((m) => m.id !== memberId);
+      if (state.activeBrushMemberId === memberId) {
+        state.activeBrushMemberId = null;
+      }
+
+      state.activeProjectLines.forEach((line) => {
+        line.lineMembers = (line.lineMembers || []).filter((id) => id !== memberId);
+        line.wordMembers = (line.wordMembers || []).map((wm) =>
+          (wm || []).filter((id) => id !== memberId)
+        );
+      });
+
+      markSyncDirty();
+      renderProjectMembersPanel();
+      renderProjectSyncLinesList();
+    }
+
+    function toggleMemberBrush(memberId) {
+      if (!memberId || state.activeBrushMemberId === memberId) {
+        state.activeBrushMemberId = null;
+      } else {
+        state.activeBrushMemberId = memberId;
+        state.activeAssignTarget = null;
+      }
+      renderProjectMembersPanel();
+      renderProjectSyncLinesList();
+    }
+
+    // ---------------------------------------------------------------------
+    // 8D. LINE-LEVEL & WORD-LEVEL MEMBER ASSIGNMENT + GRADIENTS
+    // ---------------------------------------------------------------------
+    function getValidMembersByIds(memberIds) {
+      if (!Array.isArray(memberIds) || memberIds.length === 0) return [];
+      return memberIds
+        .map((id) => state.activeProjectMembers.find((m) => m.id === id))
+        .filter(Boolean);
+    }
+
+    function buildGradientCss(colors, angle = '90deg') {
+      if (!colors || colors.length === 0) return '';
+      if (colors.length === 1) return colors[0];
+      const stops = colors.map((c, idx) => {
+        const pct = Math.round((idx / (colors.length - 1)) * 100);
+        return `${c} ${pct}%`;
+      });
+      return `linear-gradient(${angle}, ${stops.join(', ')})`;
+    }
+
+    function handleLineSingerClick(lineIndex) {
+      const proj = state.projects.find((p) => p.id === state.activeProjectId);
+      if (!canManageProject(proj)) return;
+
+      if (state.activeProjectMembers.length === 0) {
+        showToast('Add at least one member in "Members & Colors" above first.', 'info');
+        const inp = document.getElementById('newMemberNameInput');
+        if (inp) inp.focus();
+        return;
+      }
+
+      if (state.activeBrushMemberId) {
+        toggleMemberOnLine(lineIndex, state.activeBrushMemberId);
+        return;
+      }
+
+      const cur = state.activeAssignTarget;
+      if (cur && cur.type === 'line' && cur.lineIndex === lineIndex) {
+        state.activeAssignTarget = null;
+      } else {
+        state.activeAssignTarget = { type: 'line', lineIndex };
+      }
+      renderProjectSyncLinesList();
+    }
+
+    function handleWordTap(lineIndex, wordIndex) {
+      const proj = state.projects.find((p) => p.id === state.activeProjectId);
+      if (!canManageProject(proj)) return;
+
+      if (state.activeProjectMembers.length === 0) {
+        showToast('Add at least one member in "Members & Colors" above first.', 'info');
+        const inp = document.getElementById('newMemberNameInput');
+        if (inp) inp.focus();
+        return;
+      }
+
+      if (state.activeBrushMemberId) {
+        toggleMemberOnWord(lineIndex, wordIndex, state.activeBrushMemberId);
+        return;
+      }
+
+      const cur = state.activeAssignTarget;
+      if (cur && cur.type === 'word' && cur.lineIndex === lineIndex && cur.wordIndex === wordIndex) {
+        state.activeAssignTarget = null;
+      } else {
+        state.activeAssignTarget = { type: 'word', lineIndex, wordIndex };
+      }
+      renderProjectSyncLinesList();
+    }
+
+    function toggleMemberOnLine(lineIndex, memberId) {
+      const line = state.activeProjectLines[lineIndex];
+      if (!line) return;
+
+      if (!Array.isArray(line.lineMembers)) line.lineMembers = [];
+      const existsIdx = line.lineMembers.indexOf(memberId);
+      if (existsIdx >= 0) {
+        line.lineMembers.splice(existsIdx, 1);
+      } else {
+        line.lineMembers.push(memberId);
+      }
+
+      markSyncDirty();
+      renderProjectSyncLinesList();
+    }
+
+    function clearLineMembers(lineIndex) {
+      const line = state.activeProjectLines[lineIndex];
+      if (!line) return;
+      line.lineMembers = [];
+      markSyncDirty();
+      renderProjectSyncLinesList();
+    }
+
+    function toggleMemberOnWord(lineIndex, wordIndex, memberId) {
+      const line = state.activeProjectLines[lineIndex];
+      if (!line) return;
+
+      if (!Array.isArray(line.wordMembers)) {
+        line.wordMembers = line.words.map(() => []);
+      }
+      if (!Array.isArray(line.wordMembers[wordIndex])) {
+        line.wordMembers[wordIndex] = [];
+      }
+
+      const arr = line.wordMembers[wordIndex];
+      const existsIdx = arr.indexOf(memberId);
+      if (existsIdx >= 0) {
+        arr.splice(existsIdx, 1);
+      } else {
+        arr.push(memberId);
+      }
+
+      markSyncDirty();
+      renderProjectSyncLinesList();
+    }
+
+    function clearWordMembers(lineIndex, wordIndex) {
+      const line = state.activeProjectLines[lineIndex];
+      if (!line || !Array.isArray(line.wordMembers)) return;
+      line.wordMembers[wordIndex] = [];
+      markSyncDirty();
+      renderProjectSyncLinesList();
+    }
+
+    function closeAssignPicker() {
+      state.activeAssignTarget = null;
+      renderProjectSyncLinesList();
+    }
+
+    function renderProjectSyncLinesList() {
+      const listEl = document.getElementById('projectSyncLinesList');
+      if (!listEl) return;
+
+      const proj = state.projects.find((p) => p.id === state.activeProjectId);
+      const canResync = canManageProject(proj);
+
+      if (state.activeProjectLines.length === 0) {
+        listEl.innerHTML = `
+          <div class="p-8 text-center space-y-1">
+            <p class="text-sm text-zinc-300">No synced lyric lines in this project yet.</p>
+            <p class="text-xs text-zinc-500">Click "Import LRClib" above to load synced lyrics into this project.</p>
+          </div>
+        `;
+        return;
+      }
+
+      listEl.innerHTML = state.activeProjectLines
+        .map((line, index) => {
+          const isActive = index === state.activeLineIndex;
+          const words = Array.isArray(line.words) ? line.words : tokenizeLineWords(line.text);
+          const lineAssignedMembers = getValidMembersByIds(line.lineMembers || []);
+          const lineColors = lineAssignedMembers.map((m) => sanitizeHexColor(m.color));
+          const hasLineGradient = lineColors.length >= 2;
+          const lineBgGradient = lineColors.length > 0 ? buildGradientCss(lineColors, '180deg') : '';
+          const lineHorizGradient = lineColors.length > 0 ? buildGradientCss(lineColors, '90deg') : '';
+
+          let lineSingerBadgeHtml = '';
+          if (lineAssignedMembers.length === 0) {
+            lineSingerBadgeHtml = canResync
+              ? `
+                <button
+                  type="button"
+                  onclick="handleLineSingerClick(${index})"
+                  class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-inset hover:bg-zinc-800 border border-edge text-[11px] font-medium text-zinc-400 hover:text-zinc-200 transition-colors min-h-[28px]"
+                >
+                  <span>+ Line Singer</span>
+                </button>
+              `
+              : '';
+          } else {
+            const namesLabel = lineAssignedMembers.map((m) => escapeHtml(m.name)).join(' + ');
+            const dotStyle = `background: ${lineHorizGradient};`;
+            const textStyle = hasLineGradient
+              ? `background-image: ${lineHorizGradient}; -webkit-background-clip: text; background-clip: text; color: transparent;`
+              : `color: ${lineColors[0]};`;
+            const borderStyle = !hasLineGradient ? `border-color: ${lineColors[0]}55;` : 'border-color: #3f3f46;';
+
+            lineSingerBadgeHtml = `
+              <button
+                type="button"
+                ${canResync ? `onclick="handleLineSingerClick(${index})"` : 'disabled'}
+                style="${borderStyle}"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-inset border text-[11px] font-semibold transition-colors min-h-[28px]"
+              >
+                <span class="w-2.5 h-2.5 rounded-full shrink-0" style="${dotStyle}"></span>
+                <span style="${textStyle}">${namesLabel}</span>
+              </button>
+            `;
+          }
+
+          const wordsHtml = words
+            .map((word, wIdx) => {
+              const wordMemberIds =
+                Array.isArray(line.wordMembers) && Array.isArray(line.wordMembers[wIdx])
+                  ? line.wordMembers[wIdx]
+                  : [];
+              const wordAssignedMembers = getValidMembersByIds(wordMemberIds);
+              const wordColors = wordAssignedMembers.map((m) => sanitizeHexColor(m.color));
+
+              const isTargetWord =
+                state.activeAssignTarget &&
+                state.activeAssignTarget.type === 'word' &&
+                state.activeAssignTarget.lineIndex === index &&
+                state.activeAssignTarget.wordIndex === wIdx;
+
+              const effectiveColors = wordColors.length > 0 ? wordColors : lineColors;
+              const isWordExplicit = wordColors.length > 0;
+              const hasGradient = effectiveColors.length >= 2;
+              const gradCss = effectiveColors.length > 0 ? buildGradientCss(effectiveColors, '90deg') : '';
+
+              let wordTextStyle = '';
+              let underlineHtml = '';
+              let pillStyle = '';
+
+              if (effectiveColors.length === 1) {
+                wordTextStyle = `color: ${effectiveColors[0]}; font-weight: 600;`;
+                if (isWordExplicit) {
+                  pillStyle = `background-color: ${effectiveColors[0]}1f;`;
+                  underlineHtml = `<span class="block h-[2px] w-full rounded-full mt-0.5" style="background-color: ${effectiveColors[0]};"></span>`;
+                }
+              } else if (hasGradient) {
+                wordTextStyle = `background-image: ${gradCss}; -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 700;`;
+                if (isWordExplicit) {
+                  pillStyle = `background-color: rgba(255, 255, 255, 0.06);`;
+                  underlineHtml = `<span class="block h-[2.5px] w-full rounded-full mt-0.5" style="background: ${gradCss};"></span>`;
+                }
+              }
+
+              const memberTooltip = isWordExplicit
+                ? `Word: ${wordAssignedMembers.map((m) => m.name).join(' + ')}`
+                : canResync
+                ? 'Tap word to assign singer'
+                : '';
+
+              return `
+                <button
+                  type="button"
+                  ${canResync ? `onclick="handleWordTap(${index}, ${wIdx})"` : 'disabled'}
+                  title="${escapeHtml(memberTooltip)}"
+                  style="${pillStyle}"
+                  class="inline-flex flex-col items-start px-1.5 py-0.5 rounded-md text-base sm:text-sm leading-snug transition-all ${
+                    canResync ? 'hover:bg-zinc-800/90 cursor-pointer' : 'cursor-default'
+                  } ${isTargetWord ? 'ring-1 ring-zinc-100 bg-zinc-800' : ''} ${
+                    effectiveColors.length === 0 ? (isActive ? 'text-white font-semibold' : 'text-zinc-200') : ''
+                  }"
+                >
+                  <span style="${wordTextStyle}">${escapeHtml(word)}</span>
+                  ${underlineHtml}
+                </button>
+              `;
+            })
+            .join('');
+
+          let inlineAssignDrawerHtml = '';
+          if (canResync && state.activeAssignTarget && state.activeAssignTarget.lineIndex === index) {
+            const target = state.activeAssignTarget;
+            const isLineTarget = target.type === 'line';
+            const selectedIds = isLineTarget
+              ? line.lineMembers || []
+              : (line.wordMembers && line.wordMembers[target.wordIndex]) || [];
+
+            const targetTitle = isLineTarget
+              ? 'Assign Whole Line Singer(s) — pick 2+ for gradient'
+              : `Assign Word "${escapeHtml(words[target.wordIndex] || '')}" — pick 2+ for gradient`;
+
+            const clearAction = isLineTarget
+              ? `clearLineMembers(${index})`
+              : `clearWordMembers(${index}, ${target.wordIndex})`;
+
+            inlineAssignDrawerHtml = `
+              <div class="bg-inset border border-edgeHover rounded-lg p-2.5 space-y-2">
+                <div class="flex items-center justify-between gap-2 text-[11px]">
+                  <span class="font-medium text-zinc-300">${targetTitle}</span>
+                  <div class="flex items-center gap-2 shrink-0">
+                    <button type="button" onclick="${clearAction}" class="text-zinc-400 hover:text-rose-400">Clear</button>
+                    <button type="button" onclick="closeAssignPicker()" class="text-zinc-300 hover:text-white font-medium">Done</button>
+                  </div>
+                </div>
+                <div class="flex flex-wrap gap-1.5">
+                  ${state.activeProjectMembers
+                    .map((m) => {
+                      const safeColor = sanitizeHexColor(m.color);
+                      const checked = selectedIds.includes(m.id);
+                      const toggleFn = isLineTarget
+                        ? `toggleMemberOnLine(${index}, '${m.id}')`
+                        : `toggleMemberOnWord(${index}, ${target.wordIndex}, '${m.id}')`;
+
+                      return `
+                        <button
+                          type="button"
+                          onclick="${toggleFn}"
+                          style="${checked ? `border-color: ${safeColor}; background-color: ${safeColor}26;` : ''}"
+                          class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors min-h-[34px] ${
+                            checked ? 'text-white' : 'bg-surface border-edge text-zinc-300 hover:border-edgeHover'
+                          }"
+                        >
+                          <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: ${safeColor};"></span>
+                          <span>${escapeHtml(m.name)}</span>
+                        </button>
+                      `;
+                    })
+                    .join('')}
+                </div>
+              </div>
+            `;
+          }
+
+          const resyncControlsHtml = canResync
+            ? `
+              <div class="grid grid-cols-3 sm:flex items-center gap-1.5 w-full sm:w-auto shrink-0 pt-1 sm:pt-0">
+                <button
+                  type="button"
+                  onclick="resyncLineToCurrentTime(${index})"
+                  title="Set this line timestamp to current playback time"
+                  class="px-2.5 py-1.5 rounded-lg bg-inset hover:bg-zinc-100 border border-edge hover:border-zinc-100 text-xs font-medium text-zinc-200 hover:text-zinc-950 transition-colors min-h-[36px]"
+                >
+                  Set Now
+                </button>
+                <button
+                  type="button"
+                  onclick="nudgeLineTime(${index}, -0.1)"
+                  title="Shift timestamp -0.1s"
+                  class="px-2.5 py-1.5 rounded-lg bg-inset hover:bg-zinc-800 border border-edge text-xs font-mono text-zinc-300 transition-colors min-h-[36px]"
+                >
+                  -0.1s
+                </button>
+                <button
+                  type="button"
+                  onclick="nudgeLineTime(${index}, 0.1)"
+                  title="Shift timestamp +0.1s"
+                  class="px-2.5 py-1.5 rounded-lg bg-inset hover:bg-zinc-800 border border-edge text-xs font-mono text-zinc-300 transition-colors min-h-[36px]"
+                >
+                  +0.1s
+                </button>
+              </div>
+            `
+            : '';
+
+          const leftAccentBarHtml =
+            lineColors.length > 0
+              ? `<span class="w-1 self-stretch rounded-full shrink-0" style="background: ${lineBgGradient};"></span>`
+              : '';
+
+          return `
+            <div
+              id="sync-line-row-${index}"
+              class="px-3.5 sm:px-4 py-3.5 flex gap-2.5 transition-colors ${
+                isActive ? 'bg-zinc-800/80' : 'hover:bg-inset/40'
+              }"
+            >
+              ${leftAccentBarHtml}
+              <div class="flex-1 min-w-0 space-y-2.5">
+                <!-- Top Metadata & Resync Row -->
+                <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <button
+                      type="button"
+                      onclick="seekToLine(${index})"
+                      title="Jump playback to this line"
+                      class="font-mono text-xs shrink-0 px-2 py-1 rounded transition-colors ${
+                        isActive
+                          ? 'bg-zinc-100 text-zinc-950 font-semibold'
+                          : 'bg-inset text-zinc-400 hover:text-zinc-100'
+                      }"
+                    >
+                      ${formatSecondsToLrc(line.time)}
+                    </button>
+                    ${lineSingerBadgeHtml}
+                  </div>
+                  ${resyncControlsHtml}
+                </div>
+
+                <!-- Tappable Words Row -->
+                <div class="flex flex-wrap items-center gap-x-0.5 gap-y-1">
+                  ${wordsHtml}
+                </div>
+
+                <!-- Inline Member Assignment Drawer (when active on this line) -->
+                ${inlineAssignDrawerHtml}
+              </div>
+            </div>
+          `;
+        })
+        .join('');
+    }
+
+    function toggleAutoScrollLyrics() {
+      state.autoScrollLyrics = !state.autoScrollLyrics;
+      const btn = document.getElementById('autoLocateToggleBtn');
+      if (btn) {
+        btn.setAttribute('aria-pressed', state.autoScrollLyrics ? 'true' : 'false');
+        btn.className = `flex-1 sm:flex-initial inline-flex items-center justify-center gap-2 px-3 py-2 rounded-lg border text-xs font-medium transition-colors min-h-[38px] ${
+          state.autoScrollLyrics
+            ? 'bg-zinc-100 border-zinc-100 text-zinc-950'
+            : 'bg-surface hover:bg-zinc-800 border-edge text-zinc-400'
+        }`;
+        btn.innerHTML = `
+          <span class="w-2 h-2 rounded-full ${state.autoScrollLyrics ? 'bg-emerald-500' : 'bg-zinc-600'}"></span>
+          <span>Auto-Locate: ${state.autoScrollLyrics ? 'ON' : 'OFF'}</span>
+        `;
+      }
+
+      if (state.autoScrollLyrics && state.activeLineIndex >= 0) {
+        const activeRow = document.getElementById(`sync-line-row-${state.activeLineIndex}`);
+        if (activeRow) {
+          activeRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+    }
+
+    function initYouTubePlayerForProject(videoId) {
+      if (!window.YT || !window.YT.Player) {
+        setTimeout(() => {
+          if (state.activeTab === 'project-player' && state.activeProjectId && !state.ytPlayer) {
+            initYouTubePlayerForProject(videoId);
+          }
+        }, 500);
+        return;
+      }
+
+      const hostEl = document.getElementById('ytProjectPlayerHost');
+      if (!hostEl) return;
+
+      state.ytPlayerReady = false;
+      state.ytPlayer = new window.YT.Player('ytProjectPlayerHost', {
+        videoId: videoId,
+        playerVars: {
+          playsinline: 1,
+          rel: 0,
+          modestbranding: 1
+        },
+        events: {
+          onReady: (event) => {
+            state.ytPlayerReady = true;
+            state.playbackDuration = event.target.getDuration() || 0;
+            updatePlaybackTimeUI(0, state.playbackDuration);
+            startPlaybackPolling();
+          },
+          onStateChange: (event) => {
+            const playing = event.data === window.YT.PlayerState.PLAYING;
+            state.isPlaying = playing;
+            updatePlayPauseButtonUI();
+          }
+        }
+      });
+    }
+
+    function destroyYouTubePlayer() {
+      if (state.playbackTimer) {
+        clearInterval(state.playbackTimer);
+        state.playbackTimer = null;
+      }
+      if (state.ytPlayer && typeof state.ytPlayer.destroy === 'function') {
+        try {
+          state.ytPlayer.destroy();
+        } catch (_e) {
+          // Ignore destroy errors if iframe was already removed
+        }
+      }
+      state.ytPlayer = null;
+      state.ytPlayerReady = false;
+      state.isPlaying = false;
+    }
+
+    function startPlaybackPolling() {
+      if (state.playbackTimer) clearInterval(state.playbackTimer);
+      state.playbackTimer = setInterval(() => {
+        if (!state.ytPlayer || !state.ytPlayerReady) return;
+        try {
+          const cur = state.ytPlayer.getCurrentTime() || 0;
+          const dur = state.ytPlayer.getDuration() || state.playbackDuration || 0;
+          state.currentPlaybackTime = cur;
+          state.playbackDuration = dur;
+          updatePlaybackTimeUI(cur, dur);
+          updateActiveLyricLine(cur);
+        } catch (_e) {
+          // Ignore transient player polling errors
+        }
+      }, 120);
+    }
+
+    function updatePlaybackTimeUI(cur, dur) {
+      const curLabel = document.getElementById('playerCurrentTimeLabel');
+      const durLabel = document.getElementById('playerDurationLabel');
+      const slider = document.getElementById('playerSeekSlider');
+
+      if (curLabel) curLabel.textContent = formatSecondsToLrc(cur);
+      if (durLabel) durLabel.textContent = formatSecondsToLrc(dur);
+      if (slider && dur > 0) {
+        slider.max = String(dur);
+        slider.value = String(cur);
+      }
+    }
+
+    function updatePlayPauseButtonUI() {
+      const btn = document.getElementById('playerPlayPauseBtn');
+      if (!btn) return;
+      if (state.isPlaying) {
+        btn.innerHTML = `
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+            <rect x="6" y="4" width="4" height="16" />
+            <rect x="14" y="4" width="4" height="16" />
+          </svg>
+          <span>Pause</span>
+        `;
+      } else {
+        btn.innerHTML = `
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+            <polygon points="5 3 19 12 5 21 5 3" />
+          </svg>
+          <span>Play</span>
+        `;
+      }
+    }
+
+    function toggleProjectPlayback() {
+      if (!state.ytPlayer || !state.ytPlayerReady) {
+        showToast('Music player is loading...', 'info');
+        return;
+      }
+      if (state.isPlaying) {
+        state.ytPlayer.pauseVideo();
+      } else {
+        state.ytPlayer.playVideo();
+      }
+    }
+
+    function seekRelative(deltaSeconds) {
+      if (!state.ytPlayer || !state.ytPlayerReady) return;
+      const target = Math.max(0, (state.ytPlayer.getCurrentTime() || 0) + deltaSeconds);
+      state.ytPlayer.seekTo(target, true);
+      state.currentPlaybackTime = target;
+      updatePlaybackTimeUI(target, state.playbackDuration);
+      updateActiveLyricLine(target);
+    }
+
+    function handleSeekSliderInput(val) {
+      if (!state.ytPlayer || !state.ytPlayerReady) return;
+      const target = parseFloat(val) || 0;
+      state.ytPlayer.seekTo(target, true);
+      state.currentPlaybackTime = target;
+      updatePlaybackTimeUI(target, state.playbackDuration);
+      updateActiveLyricLine(target);
+    }
+
+    function cyclePlaybackSpeed() {
+      const rates = [1, 0.75, 0.5];
+      const nextIdx = (rates.indexOf(state.playbackRate) + 1) % rates.length;
+      state.playbackRate = rates[nextIdx];
+
+      if (state.ytPlayer && state.ytPlayerReady && typeof state.ytPlayer.setPlaybackRate === 'function') {
+        state.ytPlayer.setPlaybackRate(state.playbackRate);
+      }
+
+      const btn = document.getElementById('playbackSpeedBtn');
+      if (btn) btn.textContent = `${state.playbackRate}x`;
+    }
+
+    function seekToLine(index) {
+      const line = state.activeProjectLines[index];
+      if (!line) return;
+
+      if (state.ytPlayer && state.ytPlayerReady) {
+        state.ytPlayer.seekTo(line.time, true);
+        state.ytPlayer.playVideo();
+      }
+      state.currentPlaybackTime = line.time;
+      updatePlaybackTimeUI(line.time, state.playbackDuration);
+      updateActiveLyricLine(line.time);
+    }
+
+    function updateActiveLyricLine(currentTime) {
+      let foundIndex = -1;
+      for (let i = 0; i < state.activeProjectLines.length; i++) {
+        if (currentTime >= state.activeProjectLines[i].time) {
+          foundIndex = i;
+        } else {
+          break;
+        }
+      }
+
+      if (foundIndex === state.activeLineIndex) return;
+      const prevIndex = state.activeLineIndex;
+      state.activeLineIndex = foundIndex;
+
+      if (prevIndex >= 0) {
+        const prevRow = document.getElementById(`sync-line-row-${prevIndex}`);
+        if (prevRow) {
+          prevRow.classList.remove('bg-zinc-800/80');
+          prevRow.classList.add('hover:bg-inset/40');
+        }
+      }
+      if (foundIndex >= 0) {
+        const curRow = document.getElementById(`sync-line-row-${foundIndex}`);
+        if (curRow) {
+          curRow.classList.add('bg-zinc-800/80');
+          curRow.classList.remove('hover:bg-inset/40');
+        }
+      }
+
+      if (state.autoScrollLyrics && foundIndex >= 0) {
+        const activeRow = document.getElementById(`sync-line-row-${foundIndex}`);
+        if (activeRow) {
+          activeRow.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+      }
+    }
+
+    function resyncLineToCurrentTime(index) {
+      const proj = state.projects.find((p) => p.id === state.activeProjectId);
+      if (!canManageProject(proj)) return;
+
+      const line = state.activeProjectLines[index];
+      if (!line) return;
+
+      const nowTime =
+        state.ytPlayer && state.ytPlayerReady
+          ? state.ytPlayer.getCurrentTime() || 0
+          : state.currentPlaybackTime;
+
+      line.time = Math.max(0, Number(nowTime.toFixed(2)));
+      markSyncDirty();
+      renderProjectSyncLinesList();
+    }
+
+    function nudgeLineTime(index, delta) {
+      const proj = state.projects.find((p) => p.id === state.activeProjectId);
+      if (!canManageProject(proj)) return;
+
+      const line = state.activeProjectLines[index];
+      if (!line) return;
+
+      line.time = Math.max(0, Number((line.time + delta).toFixed(2)));
+      markSyncDirty();
+      renderProjectSyncLinesList();
+    }
+
+    function sortActiveLinesByTime() {
+      const proj = state.projects.find((p) => p.id === state.activeProjectId);
+      if (!canManageProject(proj)) return;
+
+      state.activeProjectLines.sort((a, b) => a.time - b.time);
+      markSyncDirty();
+      renderProjectSyncLinesList();
+      showToast('Sorted lines by timestamp.', 'info');
+    }
+
+    function markSyncDirty() {
+      state.hasUnsavedSyncChanges = true;
+      const saveBtn = document.getElementById('saveSyncChangesBtn');
+      if (saveBtn) {
+        saveBtn.textContent = 'Save Changes';
+        saveBtn.className = 'w-full sm:w-auto px-4 py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-colors min-h-[42px] bg-zinc-100 hover:bg-white text-zinc-950';
+      }
+    }
+
+    async function saveResyncedProject() {
+      const proj = state.projects.find((p) => p.id === state.activeProjectId);
+      if (!proj) return;
+
+      if (!canManageProject(proj)) {
+        showToast('Only the project creator or admin can save changes.', 'error');
+        return;
+      }
+
+      const updatedLrc = serializeProjectDistribution(
+        state.activeProjectLines,
+        state.activeProjectMembers
+      );
+
+      try {
+        state.isSavingSync = true;
+        const saveBtn = document.getElementById('saveSyncChangesBtn');
+        if (saveBtn) {
+          saveBtn.disabled = true;
+          saveBtn.textContent = 'Saving...';
+        }
+
+        if (isSupabaseConfigured && supabaseClient) {
+          const { error } = await supabaseClient
+            .from('projects')
+            .update({ synced_lyrics: updatedLrc })
+            .eq('id', proj.id);
+          if (error) throw error;
+        }
+
+        proj.synced_lyrics = updatedLrc;
+        state.hasUnsavedSyncChanges = false;
+        saveToLocalFallback();
+        showToast('Project lyrics & assignments saved to Supabase!', 'success');
+      } catch (err) {
+        console.error('Save sync error:', err);
+        if (isNetworkOfflineError(err)) {
+          proj.synced_lyrics = updatedLrc;
+          state.hasUnsavedSyncChanges = false;
+          saveToLocalFallback();
+          showToast('Saved locally (Supabase offline).', 'info');
+        } else {
+          showToast('Failed to save changes to Supabase.', 'error');
+        }
+      } finally {
+        state.isSavingSync = false;
+        const saveBtn = document.getElementById('saveSyncChangesBtn');
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.textContent = state.hasUnsavedSyncChanges ? 'Save Changes' : 'Saved';
+          saveBtn.className = state.hasUnsavedSyncChanges
+            ? 'w-full sm:w-auto px-4 py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-colors min-h-[42px] bg-zinc-100 hover:bg-white text-zinc-950'
+            : 'w-full sm:w-auto px-4 py-2.5 rounded-lg text-xs sm:text-sm font-medium transition-colors min-h-[42px] bg-surface hover:bg-zinc-900 border border-edge text-zinc-300';
+        }
+      }
+    }
+
+    async function attachYtUrlToActiveProject() {
+      const proj = state.projects.find((p) => p.id === state.activeProjectId);
+      if (!proj) return;
+
+      if (!canManageProject(proj)) {
+        showToast('Only the project creator or admin can edit this project.', 'error');
+        return;
+      }
+
+      const input = document.getElementById('attachPlayerYtUrl');
+      const rawUrl = (input ? input.value : '').trim();
+      const videoId = extractYouTubeVideoId(rawUrl);
+
+      if (!videoId) {
+        showToast('Please paste a valid YT Music or YouTube URL.', 'error');
+        return;
+      }
+
+      try {
+        if (isSupabaseConfigured && supabaseClient) {
+          const { error } = await supabaseClient
+            .from('projects')
+            .update({
+              yt_music_url: rawUrl,
+              youtube_video_id: videoId
+            })
+            .eq('id', proj.id);
+          if (error) throw error;
+        }
+
+        proj.yt_music_url = rawUrl;
+        proj.youtube_video_id = videoId;
+        saveToLocalFallback();
+        renderProjectPlayerView();
+        showToast('YT Music track attached!', 'success');
+      } catch (err) {
+        console.error('Attach YT URL error:', err);
+        if (isNetworkOfflineError(err)) {
+          proj.yt_music_url = rawUrl;
+          proj.youtube_video_id = videoId;
+          saveToLocalFallback();
+          renderProjectPlayerView();
+          showToast('Attached locally (Supabase offline).', 'info');
+        } else {
+          showToast('Could not attach YT Music link in Supabase.', 'error');
+        }
+      }
+    }
+
+    // ---------------------------------------------------------------------
+    // 9. LRC PARSING, DISTRIBUTION METADATA & UTILITIES
+    // ---------------------------------------------------------------------
+    function tokenizeLineWords(text) {
+      if (!text || typeof text !== 'string') return [];
+      return text.trim().split(/\s+/).filter(Boolean);
+    }
+
+    function sanitizeHexColor(color) {
+      if (typeof color === 'string' && /^#[0-9a-fA-F]{6}$/.test(color.trim())) {
+        return color.trim();
+      }
+      return '#ec4899';
+    }
+
+    function parseProjectDistribution(rawText) {
+      if (!rawText || typeof rawText !== 'string') {
+        return { members: [], lines: [] };
+      }
+
+      let meta = null;
+      const cleanedRows = [];
+      const rows = rawText.split(/\r?\n/);
+
+      rows.forEach((row) => {
+        const trimmed = row.trim();
+        if (trimmed.startsWith('[anwyl2_meta:') && trimmed.endsWith(']')) {
+          try {
+            const jsonStr = trimmed.slice('[anwyl2_meta:'.length, -1);
+            meta = JSON.parse(jsonStr);
+          } catch (_e) {
+            meta = null;
+          }
+        } else {
+          cleanedRows.push(row);
+        }
+      });
+
+      const baseLines = parseLrcLyrics(cleanedRows.join('\n'));
+      const members =
+        meta && Array.isArray(meta.members)
+          ? meta.members
+              .filter((m) => m && m.id && m.name)
+              .map((m) => ({
+                id: String(m.id),
+                name: String(m.name),
+                color: sanitizeHexColor(m.color)
+              }))
+          : [];
+
+      const metaLines = meta && Array.isArray(meta.lines) ? meta.lines : [];
+
+      const lines = baseLines.map((line, idx) => {
+        const words = tokenizeLineWords(line.text);
+        const savedLineMeta = metaLines[idx] || {};
+        const lineMembers = Array.isArray(savedLineMeta.lineMembers) ? savedLineMeta.lineMembers : [];
+        const rawWordMembers = Array.isArray(savedLineMeta.wordMembers) ? savedLineMeta.wordMembers : [];
+
+        const wordMembers = words.map((_, wIdx) =>
+          Array.isArray(rawWordMembers[wIdx]) ? rawWordMembers[wIdx] : []
+        );
+
+        return {
+          time: line.time,
+          text: line.text,
+          words: words,
+          lineMembers: lineMembers,
+          wordMembers: wordMembers
+        };
+      });
+
+      return { members, lines };
+    }
+
+    function serializeProjectDistribution(lines, members) {
+      const lrcBody = serializeLinesToLrc(lines);
+      const metaPayload = {
+        members: (members || []).map((m) => ({
+          id: m.id,
+          name: m.name,
+          color: sanitizeHexColor(m.color)
+        })),
+        lines: (lines || []).map((line) => ({
+          lineMembers: Array.isArray(line.lineMembers) ? line.lineMembers : [],
+          wordMembers: Array.isArray(line.wordMembers) ? line.wordMembers : []
+        }))
+      };
+      return `${lrcBody}\n[anwyl2_meta:${JSON.stringify(metaPayload)}]`;
+    }
+
+    function parseLrcLyrics(rawText) {
+      if (!rawText || typeof rawText !== 'string') return [];
+      const rows = rawText
+        .split(/\r?\n/)
+        .filter((r) => !r.trim().startsWith('[anwyl2_meta:'));
+      const parsed = [];
+
+      const timeTagRegex = /\[(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?\]/g;
+
+      rows.forEach((row) => {
+        const matches = [...row.matchAll(timeTagRegex)];
+        const lyricText = row.replace(timeTagRegex, '').trim();
+
+        if (matches.length > 0 && lyricText) {
+          matches.forEach((m) => {
+            const mins = parseInt(m[1], 10) || 0;
+            const secs = parseInt(m[2], 10) || 0;
+            const fracStr = m[3] || '0';
+            const frac =
+              fracStr.length === 3
+                ? parseInt(fracStr, 10) / 1000
+                : fracStr.length === 2
+                ? parseInt(fracStr, 10) / 100
+                : parseInt(fracStr, 10) / 10;
+
+            parsed.push({
+              time: Number((mins * 60 + secs + frac).toFixed(2)),
+              text: lyricText
+            });
+          });
+        } else if (lyricText && !row.trim().startsWith('[')) {
+          const lastTime = parsed.length > 0 ? parsed[parsed.length - 1].time + 3 : 0;
+          parsed.push({
+            time: Number(lastTime.toFixed(2)),
+            text: lyricText
+          });
+        }
+      });
+
+      return parsed;
+    }
+
+    function serializeLinesToLrc(lines) {
+      return (lines || [])
+        .map((line) => `[${formatSecondsToLrc(line.time)}] ${line.text}`)
+        .join('\n');
+    }
+
+    function formatSecondsToLrc(totalSeconds) {
+      const safe = Math.max(0, Number(totalSeconds) || 0);
+      const mins = Math.floor(safe / 60);
+      const secs = Math.floor(safe % 60);
+      const hundredths = Math.floor((safe - Math.floor(safe)) * 100);
+      return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}.${String(hundredths).padStart(2, '0')}`;
+    }
+
+    function extractYouTubeVideoId(input) {
+      if (!input || typeof input !== 'string') return '';
+      const trimmed = input.trim();
+
+      if (/^[a-zA-Z0-9_-]{11}$/.test(trimmed)) {
+        return trimmed;
+      }
+
+      try {
+        const url = new URL(trimmed);
+        if (url.hostname.includes('youtu.be')) {
+          const id = url.pathname.replace('/', '').split('/')[0];
+          return /^[a-zA-Z0-9_-]{11}$/.test(id) ? id : '';
+        }
+        if (url.hostname.includes('youtube.com')) {
+          const v = url.searchParams.get('v');
+          if (v && /^[a-zA-Z0-9_-]{11}$/.test(v)) return v;
+          const pathParts = url.pathname.split('/').filter(Boolean);
+          if (pathParts.length >= 2 && ['shorts', 'embed', 'live'].includes(pathParts[0])) {
+            return /^[a-zA-Z0-9_-]{11}$/.test(pathParts[1]) ? pathParts[1] : '';
+          }
+        }
+      } catch (_e) {
+        return '';
+      }
+      return '';
+    }
+
+    function formatRelativeTime(isoString) {
+      if (!isoString) return '';
+      const diffSec = Math.max(0, Math.floor((Date.now() - new Date(isoString).getTime()) / 1000));
+      if (diffSec < 60) return 'just now';
+      const diffMin = Math.floor(diffSec / 60);
+      if (diffMin < 60) return `${diffMin}m ago`;
+      const diffHr = Math.floor(diffMin / 60);
+      if (diffHr < 24) return `${diffHr}h ago`;
+      const diffDay = Math.floor(diffHr / 24);
+      if (diffDay < 30) return `${diffDay}d ago`;
+      return new Date(isoString).toLocaleDateString();
+    }
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function decodeHtmlEntities(str) {
+      const txt = document.createElement('textarea');
+      txt.innerHTML = str || '';
+      return txt.value;
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      if (!container) return;
+
+      const colors =
+        type === 'error'
+          ? 'bg-rose-950/95 border-rose-700 text-rose-100'
+          : type === 'success'
+          ? 'bg-emerald-950/95 border-emerald-700 text-emerald-100'
+          : 'bg-zinc-900/95 border-edgeHover text-zinc-100';
+
+      const toast = document.createElement('div');
+      toast.className = `pointer-events-auto px-4 py-2.5 rounded-xl border text-xs sm:text-sm shadow-lg transition-opacity duration-200 ${colors}`;
+      toast.textContent = message;
+
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 220);
+      }, 3200);
+    }
+  </script>
+</body>
+</html>
