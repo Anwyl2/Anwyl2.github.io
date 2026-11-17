@@ -520,6 +520,63 @@
     .site-footer-bottom { padding-top: 0; display: flex; flex-direction: column; gap: 8px; }
     .site-footer-bottom p { font-size: 12px; line-height: 1.6; color: #8b8b91; }
     .site-footer-bottom p:first-child { color: var(--md-on-surface-variant); font-weight: 500; }
+
+    /* ===== My Line Distribution Videos ===== */
+    html body #view-videos:not(.hidden) { display: flex; flex-direction: column; gap: 20px; padding-bottom: 24px; }
+    html body #view-videos > * { margin-top: 0 !important; }
+    html body #view-videos > .videos-header {
+      background-color: var(--md-surface-container);
+      border-radius: 36px; padding: 28px 24px;
+      display: flex; flex-direction: column; gap: 18px;
+    }
+    @media (min-width: 640px) {
+      html body #view-videos > .videos-header { padding: 40px; flex-direction: row; align-items: flex-end; justify-content: space-between; }
+    }
+    html body #view-videos h1 {
+      font-family: 'Outfit', sans-serif; font-weight: 800; letter-spacing: -0.035em; line-height: 1.02;
+      color: #f4f4f6; font-size: clamp(2rem, 9vw, 3.25rem);
+    }
+    html body #view-videos .videos-header p { font-size: 1rem; line-height: 1.55; color: var(--md-on-surface-variant); max-width: 34rem; margin-top: 10px; }
+    html body #videoSearchInput { border-radius: 9999px; padding-left: 22px; }
+    html body #videoAddPanel > div { padding: 24px; }
+
+    .video-filter-btn {
+      display: inline-flex; align-items: center; gap: 8px; min-height: 40px; padding: 0 16px;
+      border-radius: 9999px; font-size: 13px; font-weight: 600;
+      background: var(--md-surface-container-high); color: var(--md-on-surface-variant);
+      transition: background-color .2s ease, color .2s ease;
+    }
+    .video-filter-btn:hover { background: #38383b; color: #fff; }
+    .video-filter-btn.is-active { background: var(--md-secondary-container); color: var(--md-on-secondary-container); }
+    .video-filter-count { font-size: 11px; opacity: .7; }
+
+    .video-card {
+      background-color: var(--md-surface-container);
+      border-radius: 28px; overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+    .video-thumb { position: relative; display: block; aspect-ratio: 16 / 9; background: #000; }
+    .video-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+    .video-badge {
+      position: absolute; top: 12px; left: 12px;
+      padding: 5px 12px; border-radius: 9999px;
+      font-size: 12px; font-weight: 700; letter-spacing: .01em;
+      box-shadow: 0 2px 8px rgba(0,0,0,.45);
+    }
+    .video-body { padding: 16px 20px 20px; display: flex; flex-direction: column; gap: 12px; }
+    .video-title { font-family: 'Outfit', sans-serif; font-weight: 700; font-size: 1.05rem; letter-spacing: -0.01em; line-height: 1.3; color: #f4f4f6; }
+    .video-artist { font-size: 12px; color: var(--md-on-surface-variant); margin-top: 2px; }
+    .video-field { display: flex; flex-direction: column; gap: 2px; }
+    .video-field-label { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: #8b8b91; }
+    .video-field p { font-size: 14px; line-height: 1.5; color: var(--md-on-surface); white-space: pre-line; overflow-wrap: anywhere; }
+    .video-field p.video-field-empty { color: #6b6b71; font-style: italic; }
+    .video-edit-btn {
+      flex-shrink: 0; min-height: 34px; padding: 0 16px; border-radius: 9999px;
+      background: var(--md-surface-container-high); color: var(--md-on-surface);
+      font-size: 12px; font-weight: 600;
+    }
+    .video-edit-btn:hover { background: #38383b; color: #fff; }
+    .video-edit { padding-top: 4px; }
   </style>
 </head>
 <body class="bg-canvas text-zinc-100 font-sans antialiased min-h-screen flex flex-col selection:bg-zinc-700 selection:text-white">
@@ -600,6 +657,10 @@
         <button type="button" class="drawer-item" data-nav="home" onclick="navGo('home')">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 11l9-8 9 8" /><path d="M5 10v10h5v-6h4v6h5V10" /></svg>
           <span>Home</span>
+        </button>
+        <button type="button" class="drawer-item" data-nav="videos" onclick="navGo('videos')">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="3" /><path d="M10 9.5v5l4.5-2.5z" /></svg>
+          <span>My Line Distribution Videos</span><span class="drawer-count" data-count="videos">0</span>
         </button>
         <button type="button" class="drawer-item" data-nav="requests" onclick="navGo('requests')">
           <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 20V4" /><path d="M6 10l6-6 6 6" /><path d="M5 20h14" /></svg>
@@ -690,6 +751,36 @@
     <!-- ===================================================================
          SECTION 1: SONG REQUESTS
          =================================================================== -->
+    <!-- ===================================================================
+         SECTION: MY LINE DISTRIBUTION VIDEOS (COLLECTION)
+         =================================================================== -->
+    <section id="view-videos" class="hidden space-y-5">
+      <div class="videos-header">
+        <div class="space-y-1">
+          <h1 class="text-xl sm:text-2xl font-semibold text-zinc-100">My Line Distribution Videos</h1>
+          <p class="text-xs sm:text-sm text-zinc-400">Browse the full collection. Each video has an accuracy label, a result and a remark.</p>
+        </div>
+        <div id="videoAdminBar" class="hidden"></div>
+      </div>
+
+      <div id="videoAddPanel" class="hidden"></div>
+
+      <div class="space-y-3">
+        <input
+          type="text"
+          id="videoSearchInput"
+          autocomplete="off"
+          oninput="setVideoSearch(this.value)"
+          placeholder="Search the collection (title, artist, result, remark)..."
+          class="w-full bg-inset border border-edge rounded-lg px-3.5 py-2.5 text-base sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 min-h-[44px]"
+        />
+        <div id="videoFilterChips" class="flex flex-wrap items-center gap-1.5"></div>
+        <p id="videoCountLabel" class="text-xs text-zinc-500"></p>
+      </div>
+
+      <div id="videosList"></div>
+    </section>
+
     <section id="view-requests" class="hidden space-y-5">
       <div class="space-y-1">
         <h1 class="text-xl sm:text-2xl font-semibold text-zinc-100">Song Requests</h1>
@@ -1227,6 +1318,7 @@
         state.projects = rawProj ? JSON.parse(rawProj) : [...SAMPLE_PROJECTS];
         state.userVotedRequestIds = new Set(rawVotes ? JSON.parse(rawVotes) : []);
         state.suggestions = rawSug ? JSON.parse(rawSug) : [];
+        loadCollectionLocal();
       } catch (err) {
         console.error('Local fallback cache load error:', err);
         state.requests = [...SAMPLE_REQUESTS];
@@ -1242,6 +1334,7 @@
         localStorage.setItem(LOCAL_STORAGE_KEYS.VOTES, JSON.stringify([...state.userVotedRequestIds]));
         localStorage.setItem(LOCAL_STORAGE_KEYS.PROJECTS, JSON.stringify(state.projects));
         localStorage.setItem(LOCAL_STORAGE_KEYS.SUGGESTIONS, JSON.stringify(state.suggestions));
+        saveCollectionLocal();
       } catch (err) {
         console.error('Local fallback cache save error:', err);
       }
@@ -1305,6 +1398,7 @@
       }
       state.user = null;
       state.userVotedRequestIds = new Set();
+      renderVideosView();
       renderAuthHeader();
       updateRequestFormVisibility();
       renderRequestsList();
@@ -1642,7 +1736,7 @@
           votes_count: voteCounts[r.id] || 0
         }));
         state.userVotedRequestIds = myVotes;
-        state.projects = projRes.data || [];
+        splitCollectionRows(projRes.data || []);
         state.supabaseOffline = false;
 
         saveToLocalFallback();
@@ -1657,6 +1751,7 @@
 
     function refreshAllViews() {
       updateNavBadges();
+      renderVideosView();
       renderAuthHeader();
       updateRequestFormVisibility();
       renderRequestsList();
@@ -1684,7 +1779,7 @@
 
       state.activeTab = tabName;
 
-      const views = ['home', 'requests', 'projects', 'project-player', 'suggestion-review'];
+      const views = ['home', 'requests', 'projects', 'videos', 'project-player', 'suggestion-review'];
       views.forEach((v) => {
         const el = document.getElementById(`view-${v}`);
         if (el) {
@@ -1707,7 +1802,9 @@
         }
       });
 
-      if (tabName === 'projects') {
+      if (tabName === 'videos') {
+        renderVideosView();
+      } else if (tabName === 'projects') {
         renderProjectsList();
       } else if (tabName === 'project-player') {
         renderProjectPlayerView();
@@ -2534,6 +2631,11 @@
       const target = state.pendingDeleteTarget;
       if (!target) return;
       closeConfirmDeleteModal();
+
+      if (target.type === 'video') {
+        await deleteCollectionVideo(target.id);
+        return;
+      }
 
       if (target.type === 'request') {
         if (!state.user || !state.user.isAdmin) return;
@@ -5134,6 +5236,557 @@
     }
 
     // ---------------------------------------------------------------------
+    // 11B. MY LINE DISTRIBUTION VIDEOS (COLLECTION)
+    //   Stored in the existing `projects` table (no schema change):
+    //   each video is a row whose synced_lyrics holds one hidden meta line
+    //   [anwyl-video:{"v":1,"label":"...","result":"...","remark":"..."}]
+    //   Only rows created by an admin account are shown in the collection.
+    // ---------------------------------------------------------------------
+    const VIDEO_META_PREFIX = '[anwyl-video:';
+    const COLLECTION_LS_KEY = 'anwyl2_collection_v1';
+    const VIDEO_LABELS = [
+      { key: 'Seems Accurate', bg: '#4ade80', fg: '#052e16' },
+      { key: 'Need an Update', bg: '#fde047', fg: '#422006' },
+      { key: 'Needs Fix', bg: '#f87171', fg: '#450a0a' },
+      { key: 'Updated', bg: '#60a5fa', fg: '#0b1e3f' }
+    ];
+
+    Object.assign(state, {
+      collection: [],
+      videoFilter: 'ALL',
+      videoSearch: '',
+      videoEditingId: null,
+      videoAddOpen: false,
+      videoBusy: false
+    });
+
+    function getVideoLabelMeta(key) {
+      return VIDEO_LABELS.find((l) => l.key === key) || VIDEO_LABELS[0];
+    }
+
+    function isVideoAdmin() {
+      return Boolean(state.user && state.user.isAdmin);
+    }
+
+    function findVideoMetaLine(raw) {
+      return (
+        String(raw || '')
+          .split(/\r?\n/)
+          .map((l) => l.trim())
+          .find((l) => l.startsWith(VIDEO_META_PREFIX) && l.endsWith(']')) || null
+      );
+    }
+
+    function isCollectionRow(row) {
+      return Boolean(row && findVideoMetaLine(row.synced_lyrics));
+    }
+
+    function isAdminCreatedRow(row) {
+      return Array.isArray(CONFIG.ADMIN_USER_IDS) && CONFIG.ADMIN_USER_IDS.includes(row.created_by_id);
+    }
+
+    function parseVideoMeta(raw) {
+      const line = findVideoMetaLine(raw);
+      if (!line) return null;
+      try {
+        const obj = JSON.parse(line.slice(VIDEO_META_PREFIX.length, -1));
+        return obj && typeof obj === 'object' ? obj : {};
+      } catch (_e) {
+        return {};
+      }
+    }
+
+    function buildVideoMetaLine(label, result, remark) {
+      return (
+        VIDEO_META_PREFIX +
+        JSON.stringify({
+          v: 1,
+          label: getVideoLabelMeta(label).key,
+          result: String(result || '').trim(),
+          remark: String(remark || '').trim()
+        }) +
+        ']'
+      );
+    }
+
+    function rowToVideo(row) {
+      const meta = parseVideoMeta(row.synced_lyrics) || {};
+      return {
+        id: row.id,
+        title: row.song_title || 'Untitled video',
+        artist: row.artist_name || '',
+        url: row.yt_music_url || '',
+        videoId: row.youtube_video_id || extractYouTubeVideoId(row.yt_music_url || ''),
+        label: getVideoLabelMeta(meta.label).key,
+        result: String(meta.result || ''),
+        remark: String(meta.remark || ''),
+        created_at: row.created_at,
+        created_by_id: row.created_by_id
+      };
+    }
+
+    // Separates normal projects from collection videos (both live in `projects`)
+    function splitCollectionRows(rows) {
+      const list = Array.isArray(rows) ? rows : [];
+      state.projects = list.filter((r) => !isCollectionRow(r));
+      state.collection = list.filter((r) => isCollectionRow(r) && isAdminCreatedRow(r)).map(rowToVideo);
+    }
+
+    function loadCollectionLocal() {
+      try {
+        const raw = localStorage.getItem(COLLECTION_LS_KEY);
+        state.collection = raw ? JSON.parse(raw) : [];
+      } catch (_e) {
+        state.collection = [];
+      }
+    }
+
+    function saveCollectionLocal() {
+      try {
+        localStorage.setItem(COLLECTION_LS_KEY, JSON.stringify(state.collection || []));
+      } catch (_e) {
+        // Ignore storage errors
+      }
+    }
+
+    async function fetchYouTubeMeta(videoId) {
+      if (!CONFIG.YOUTUBE_API_KEY) return {};
+      try {
+        const res = await fetch(
+          `https://www.googleapis.com/youtube/v3/videos?part=snippet&id=${encodeURIComponent(videoId)}&key=${encodeURIComponent(CONFIG.YOUTUBE_API_KEY)}`
+        );
+        const data = await res.json();
+        const sn = data && data.items && data.items[0] && data.items[0].snippet;
+        if (!sn) return {};
+        return {
+          title: decodeHtmlEntities(sn.title || ''),
+          channel: decodeHtmlEntities((sn.channelTitle || '').replace(/\s-\sTopic$/i, ''))
+        };
+      } catch (_e) {
+        return {};
+      }
+    }
+
+    function videoLabelOptionsHtml(selected) {
+      return VIDEO_LABELS.map(
+        (l) => `<option value="${escapeAttr(l.key)}" ${l.key === selected ? 'selected' : ''}>${escapeHtml(l.key)}</option>`
+      ).join('');
+    }
+
+    // ----- Rendering -----
+    function renderVideosView() {
+      if (!document.getElementById('view-videos')) return;
+      renderVideoAdminArea();
+      renderVideoFilters();
+      renderVideosList();
+    }
+
+    function renderVideoAdminArea() {
+      const bar = document.getElementById('videoAdminBar');
+      const panel = document.getElementById('videoAddPanel');
+      if (!bar || !panel) return;
+
+      if (!isVideoAdmin()) {
+        bar.classList.add('hidden');
+        bar.innerHTML = '';
+        panel.classList.add('hidden');
+        panel.innerHTML = '';
+        state.videoAddOpen = false;
+        state.videoEditingId = null;
+        return;
+      }
+
+      bar.classList.remove('hidden');
+      bar.innerHTML = `
+        <button
+          type="button"
+          onclick="toggleVideoAddPanel()"
+          class="px-4 py-2.5 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs sm:text-sm font-semibold transition-colors min-h-[42px]"
+        >
+          ${state.videoAddOpen ? 'Close' : '+ Add video'}
+        </button>
+      `;
+
+      if (state.videoAddOpen) {
+        panel.classList.remove('hidden');
+        if (!panel.innerHTML.trim()) {
+          panel.innerHTML = `
+            <div class="bg-surface border border-edge rounded-xl p-4 sm:p-5 space-y-3.5">
+              <h2 class="text-base font-semibold text-zinc-100">Add video to collection</h2>
+              <div>
+                <label for="vidAddUrl" class="block text-xs font-medium text-zinc-400 mb-1.5">YouTube link *</label>
+                <input type="text" id="vidAddUrl" autocomplete="off" placeholder="https://www.youtube.com/watch?v=..."
+                  class="w-full bg-inset border border-edge rounded-lg px-3.5 py-2.5 text-base sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 min-h-[44px]" />
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label for="vidAddTitle" class="block text-xs font-medium text-zinc-400 mb-1.5">Title (blank = auto from YouTube)</label>
+                  <input type="text" id="vidAddTitle" autocomplete="off" maxlength="160"
+                    class="w-full bg-inset border border-edge rounded-lg px-3.5 py-2.5 text-base sm:text-sm text-zinc-100 focus:outline-none focus:border-zinc-500 min-h-[44px]" />
+                </div>
+                <div>
+                  <label for="vidAddArtist" class="block text-xs font-medium text-zinc-400 mb-1.5">Artist / group (blank = auto)</label>
+                  <input type="text" id="vidAddArtist" autocomplete="off" maxlength="80"
+                    class="w-full bg-inset border border-edge rounded-lg px-3.5 py-2.5 text-base sm:text-sm text-zinc-100 focus:outline-none focus:border-zinc-500 min-h-[44px]" />
+                </div>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label for="vidAddLabel" class="block text-xs font-medium text-zinc-400 mb-1.5">Label</label>
+                  <select id="vidAddLabel" class="w-full bg-inset border border-edge rounded-lg px-3 py-2.5 text-base sm:text-sm text-zinc-100 focus:outline-none focus:border-zinc-500 min-h-[44px]">
+                    ${videoLabelOptionsHtml('Seems Accurate')}
+                  </select>
+                </div>
+                <div>
+                  <label for="vidAddResult" class="block text-xs font-medium text-zinc-400 mb-1.5">Result</label>
+                  <input type="text" id="vidAddResult" autocomplete="off" maxlength="160" placeholder="e.g. All lines match the song"
+                    class="w-full bg-inset border border-edge rounded-lg px-3.5 py-2.5 text-base sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500 min-h-[44px]" />
+                </div>
+              </div>
+              <div>
+                <label for="vidAddRemark" class="block text-xs font-medium text-zinc-400 mb-1.5">Remark</label>
+                <textarea id="vidAddRemark" rows="3" maxlength="600" placeholder="Anything worth noting about this video..."
+                  class="w-full bg-inset border border-edge rounded-lg p-3 text-base sm:text-sm text-zinc-100 placeholder-zinc-500 focus:outline-none focus:border-zinc-500"></textarea>
+              </div>
+              <div class="flex items-center justify-end gap-2 pt-1">
+                <button type="button" onclick="toggleVideoAddPanel(false)"
+                  class="px-4 py-2.5 rounded-lg bg-inset hover:bg-zinc-800 border border-edge text-xs sm:text-sm text-zinc-300 min-h-[42px]">Cancel</button>
+                <button type="button" id="vidAddSubmitBtn" onclick="addCollectionVideo()"
+                  class="px-5 py-2.5 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs sm:text-sm font-semibold transition-colors min-h-[42px]">Add video</button>
+              </div>
+            </div>
+          `;
+        }
+      } else {
+        panel.classList.add('hidden');
+        panel.innerHTML = '';
+      }
+    }
+
+    function renderVideoFilters() {
+      const el = document.getElementById('videoFilterChips');
+      if (!el) return;
+      const countFor = (key) =>
+        key === 'ALL' ? state.collection.length : state.collection.filter((v) => v.label === key).length;
+      const chips = [{ key: 'ALL', text: 'All' }].concat(VIDEO_LABELS.map((l) => ({ key: l.key, text: l.key })));
+      el.innerHTML = chips
+        .map(
+          (c) => `
+            <button
+              type="button"
+              onclick="setVideoFilter('${escapeAttr(c.key)}')"
+              class="video-filter-btn ${state.videoFilter === c.key ? 'is-active' : ''}"
+            >${escapeHtml(c.text)} <span class="video-filter-count">${countFor(c.key)}</span></button>
+          `
+        )
+        .join('');
+    }
+
+    function renderVideosList() {
+      const el = document.getElementById('videosList');
+      const countEl = document.getElementById('videoCountLabel');
+      if (!el) return;
+
+      const admin = isVideoAdmin();
+      const q = (state.videoSearch || '').trim().toLowerCase();
+      const list = state.collection.filter((v) => {
+        if (state.videoFilter !== 'ALL' && v.label !== state.videoFilter) return false;
+        if (!q) return true;
+        return [v.title, v.artist, v.result, v.remark, v.label].join(' ').toLowerCase().includes(q);
+      });
+
+      if (countEl) {
+        countEl.textContent = `Collection · showing ${list.length} of ${state.collection.length} video${
+          state.collection.length === 1 ? '' : 's'
+        }`;
+      }
+
+      if (state.collection.length === 0) {
+        el.innerHTML = `
+          <div class="bg-surface border border-edge rounded-xl p-8 text-center space-y-1">
+            <p class="text-sm font-medium text-zinc-300">No videos in the collection yet</p>
+            <p class="text-xs text-zinc-500">${admin ? 'Use "+ Add video" above to add the first one.' : 'Check back soon.'}</p>
+          </div>`;
+        return;
+      }
+      if (list.length === 0) {
+        el.innerHTML = `
+          <div class="bg-surface border border-edge rounded-xl p-8 text-center space-y-1">
+            <p class="text-sm font-medium text-zinc-300">No videos match</p>
+            <p class="text-xs text-zinc-500">Try a different search or label filter.</p>
+          </div>`;
+        return;
+      }
+
+      const fieldHtml = (name, value) =>
+        value
+          ? `<div class="video-field"><span class="video-field-label">${name}</span><p>${escapeHtml(value)}</p></div>`
+          : admin
+          ? `<div class="video-field"><span class="video-field-label">${name}</span><p class="video-field-empty">Not set</p></div>`
+          : '';
+
+      const cards = list
+        .map((v) => {
+          const lm = getVideoLabelMeta(v.label);
+          const editing = admin && state.videoEditingId === v.id;
+          const watchUrl = `https://www.youtube.com/watch?v=${encodeURIComponent(v.videoId)}`;
+          const thumb = `https://i.ytimg.com/vi/${encodeURIComponent(v.videoId)}/hqdefault.jpg`;
+          const idAttr = escapeAttr(v.id);
+
+          const editForm = editing
+            ? `
+              <div class="video-edit space-y-3">
+                <div>
+                  <label for="vidEditLabel" class="block text-xs font-medium text-zinc-400 mb-1.5">Label</label>
+                  <select id="vidEditLabel" class="w-full bg-inset border border-edge rounded-lg px-3 py-2.5 text-base sm:text-sm text-zinc-100 focus:outline-none focus:border-zinc-500 min-h-[44px]">
+                    ${videoLabelOptionsHtml(v.label)}
+                  </select>
+                </div>
+                <div>
+                  <label for="vidEditResult" class="block text-xs font-medium text-zinc-400 mb-1.5">Result</label>
+                  <input type="text" id="vidEditResult" maxlength="160" value="${escapeAttr(v.result)}"
+                    class="w-full bg-inset border border-edge rounded-lg px-3.5 py-2.5 text-base sm:text-sm text-zinc-100 focus:outline-none focus:border-zinc-500 min-h-[44px]" />
+                </div>
+                <div>
+                  <label for="vidEditRemark" class="block text-xs font-medium text-zinc-400 mb-1.5">Remark</label>
+                  <textarea id="vidEditRemark" rows="3" maxlength="600"
+                    class="w-full bg-inset border border-edge rounded-lg p-3 text-base sm:text-sm text-zinc-100 focus:outline-none focus:border-zinc-500">${escapeHtml(v.remark)}</textarea>
+                </div>
+                <div class="flex flex-wrap items-center justify-between gap-2">
+                  <button type="button" onclick="promptDeleteVideo('${idAttr}')"
+                    class="px-3.5 py-2 rounded-lg bg-inset hover:bg-rose-950/60 border border-edge hover:border-rose-500/40 text-xs font-medium text-rose-400 min-h-[38px]">Delete video</button>
+                  <div class="flex items-center gap-2">
+                    <button type="button" onclick="cancelVideoEdit()"
+                      class="px-3.5 py-2 rounded-lg bg-inset hover:bg-zinc-800 border border-edge text-xs text-zinc-300 min-h-[38px]">Cancel</button>
+                    <button type="button" id="vidEditSaveBtn" onclick="saveVideoEdit('${idAttr}')"
+                      class="px-4 py-2 rounded-lg bg-zinc-100 hover:bg-white text-zinc-950 text-xs font-semibold min-h-[38px]">Save</button>
+                  </div>
+                </div>
+              </div>`
+            : '';
+
+          const editBtn =
+            admin && !editing
+              ? `<button type="button" onclick="startVideoEdit('${idAttr}')" class="video-edit-btn">Edit</button>`
+              : '';
+
+          return `
+            <article class="video-card">
+              <a href="${escapeAttr(watchUrl)}" target="_blank" rel="noopener noreferrer" class="video-thumb" aria-label="Watch ${escapeAttr(v.title)} on YouTube">
+                <img src="${escapeAttr(thumb)}" alt="${escapeAttr(v.title)} thumbnail" loading="lazy" />
+                <span class="video-badge" style="background-color: ${lm.bg}; color: ${lm.fg};">${escapeHtml(lm.key)}</span>
+              </a>
+              <div class="video-body">
+                <div class="flex items-start justify-between gap-2">
+                  <div class="min-w-0">
+                    <h3 class="video-title">${escapeHtml(v.title)}</h3>
+                    ${v.artist ? `<p class="video-artist">${escapeHtml(v.artist)}</p>` : ''}
+                  </div>
+                  ${editBtn}
+                </div>
+                ${editing ? '' : fieldHtml('Result', v.result)}
+                ${editing ? '' : fieldHtml('Remark', v.remark)}
+                ${editForm}
+              </div>
+            </article>`;
+        })
+        .join('');
+
+      el.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-2 gap-3">${cards}</div>`;
+    }
+
+    // ----- Browse / search (everyone) -----
+    function setVideoFilter(key) {
+      state.videoFilter = key;
+      renderVideoFilters();
+      renderVideosList();
+    }
+
+    function setVideoSearch(value) {
+      state.videoSearch = value || '';
+      renderVideosList();
+    }
+
+    // ----- Admin-only actions -----
+    function toggleVideoAddPanel(forceState) {
+      if (!isVideoAdmin()) return;
+      state.videoAddOpen = typeof forceState === 'boolean' ? forceState : !state.videoAddOpen;
+      renderVideoAdminArea();
+    }
+
+    function startVideoEdit(id) {
+      if (!isVideoAdmin()) return;
+      state.videoEditingId = id;
+      renderVideosList();
+    }
+
+    function cancelVideoEdit() {
+      state.videoEditingId = null;
+      renderVideosList();
+    }
+
+    async function addCollectionVideo() {
+      if (!isVideoAdmin()) {
+        showToast('Only the admin can add videos.', 'error');
+        return;
+      }
+      if (state.videoBusy) return;
+
+      const getVal = (id) => (document.getElementById(id)?.value || '').trim();
+      const url = getVal('vidAddUrl');
+      const videoId = extractYouTubeVideoId(url);
+      if (!videoId) {
+        showToast('Paste a valid YouTube link.', 'error');
+        return;
+      }
+      if (state.collection.some((v) => v.videoId === videoId)) {
+        showToast('That video is already in the collection.', 'info');
+        return;
+      }
+
+      const btn = document.getElementById('vidAddSubmitBtn');
+      try {
+        state.videoBusy = true;
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = 'Adding...';
+        }
+
+        let title = getVal('vidAddTitle');
+        let artist = getVal('vidAddArtist');
+        if (!title || !artist) {
+          const meta = await fetchYouTubeMeta(videoId);
+          title = title || meta.title || 'Untitled video';
+          artist = artist || meta.channel || 'Unknown artist';
+        }
+
+        const payload = {
+          song_title: title,
+          artist_name: artist,
+          synced_lyrics: buildVideoMetaLine(
+            document.getElementById('vidAddLabel')?.value,
+            getVal('vidAddResult'),
+            getVal('vidAddRemark')
+          ),
+          yt_music_url: `https://www.youtube.com/watch?v=${videoId}`,
+          youtube_video_id: videoId,
+          created_by_id: state.user.id,
+          created_by_name: state.user.name
+        };
+
+        let row;
+        if (isSupabaseConfigured && supabaseClient) {
+          const { data, error } = await supabaseClient.from('projects').insert(payload).select().single();
+          if (error) throw error;
+          row = data;
+        } else {
+          row = { ...payload, id: 'vid-' + Date.now(), created_at: new Date().toISOString() };
+        }
+
+        state.collection.unshift(rowToVideo(row));
+        saveCollectionLocal();
+        state.videoAddOpen = false;
+        renderVideosView();
+        showToast('Video added to the collection.', 'success');
+      } catch (err) {
+        console.error('Add collection video error:', err);
+        showToast(err.message || 'Could not add video.', 'error');
+      } finally {
+        state.videoBusy = false;
+        const b = document.getElementById('vidAddSubmitBtn');
+        if (b) {
+          b.disabled = false;
+          b.textContent = 'Add video';
+        }
+      }
+    }
+
+    async function saveVideoEdit(id) {
+      if (!isVideoAdmin()) {
+        showToast('Only the admin can edit videos.', 'error');
+        return;
+      }
+      const video = state.collection.find((v) => String(v.id) === String(id));
+      if (!video || state.videoBusy) return;
+
+      const label = document.getElementById('vidEditLabel')?.value;
+      const result = (document.getElementById('vidEditResult')?.value || '').trim();
+      const remark = (document.getElementById('vidEditRemark')?.value || '').trim();
+      const metaLine = buildVideoMetaLine(label, result, remark);
+      const btn = document.getElementById('vidEditSaveBtn');
+
+      try {
+        state.videoBusy = true;
+        if (btn) {
+          btn.disabled = true;
+          btn.textContent = 'Saving...';
+        }
+
+        if (isSupabaseConfigured && supabaseClient) {
+          const { data, error } = await supabaseClient
+            .from('projects')
+            .update({ synced_lyrics: metaLine })
+            .eq('id', video.id)
+            .select();
+          if (error) throw error;
+          if (!data || data.length === 0) {
+            throw new Error('Not saved: your account is not allowed to edit this video.');
+          }
+        }
+
+        video.label = getVideoLabelMeta(label).key;
+        video.result = result;
+        video.remark = remark;
+        state.videoEditingId = null;
+        saveCollectionLocal();
+        renderVideosView();
+        showToast('Video updated.', 'success');
+      } catch (err) {
+        console.error('Save video error:', err);
+        showToast(err.message || 'Could not save changes.', 'error');
+        if (btn) {
+          btn.disabled = false;
+          btn.textContent = 'Save';
+        }
+      } finally {
+        state.videoBusy = false;
+      }
+    }
+
+    function promptDeleteVideo(id) {
+      if (!isVideoAdmin()) return;
+      const video = state.collection.find((v) => String(v.id) === String(id));
+      if (!video) return;
+      state.pendingDeleteTarget = { type: 'video', id: video.id };
+      const msgEl = document.getElementById('confirmDeleteMessage');
+      if (msgEl) {
+        msgEl.textContent = `Are you sure you want to delete "${video.title}" from the collection?`;
+      }
+      document.getElementById('confirmDeleteModal')?.classList.remove('hidden');
+    }
+
+    async function deleteCollectionVideo(id) {
+      if (!isVideoAdmin()) return;
+      try {
+        if (isSupabaseConfigured && supabaseClient) {
+          const { data, error } = await supabaseClient.from('projects').delete().eq('id', id).select();
+          if (error) throw error;
+          if (!data || data.length === 0) {
+            throw new Error('Not deleted: your account is not allowed to delete this video.');
+          }
+        }
+        state.collection = state.collection.filter((v) => String(v.id) !== String(id));
+        state.videoEditingId = null;
+        saveCollectionLocal();
+        renderVideosView();
+        showToast('Video deleted.', 'info');
+      } catch (err) {
+        console.error('Delete video error:', err);
+        showToast(err.message || 'Could not delete video.', 'error');
+      }
+    }
+
+    // ---------------------------------------------------------------------
     // 12. APP INITIALIZATION
     // ---------------------------------------------------------------------
     window.addEventListener('DOMContentLoaded', async () => {
@@ -5183,6 +5836,8 @@
         var dst = drawer.querySelector('[data-count="' + k + '"]');
         if (src && dst) dst.textContent = src.textContent;
       });
+      var vc = drawer.querySelector('[data-count="videos"]');
+      if (vc && typeof state !== 'undefined' && Array.isArray(state.collection)) vc.textContent = state.collection.length;
       if (overlay) overlay.classList.remove('hidden');
       drawer.classList.add('open');
       if (btn) btn.setAttribute('aria-expanded', 'true');
